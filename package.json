@@ -1,0 +1,12 @@
+{
+  "name": "quire",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "packageManager": "pnpm@11.6.0",
+  "scripts": {
+    "dev": "pnpm --filter @quire/desktop tauri dev",
+    "build": "pnpm --filter @quire/desktop tauri build",
+    "typecheck": "pnpm -r typecheck",
+    "check": "pnpm typecheck && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml"
+  }
+}

@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Sandbox probe</title>
+  <style>
+    body { font: 14px -apple-system, system-ui, sans-serif; padding: 32px; }
+    li { margin: 6px 0; font-family: ui-monospace, monospace; font-size: 12px; }
+    .pass { color: #15803d; } .fail { color: #b91c1c; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Sandbox probe</h1>
+  <p>Every line should be green. Red means this page escaped the sandbox.</p>
+  <ul id="out"></ul>
+  <script>
+    const out = document.getElementById("out");
+    const report = (name, blocked, detail = "") => {
+      out.insertAdjacentHTML("beforeend",
+        `<li class="${blocked ? "pass" : "fail"}">${blocked ? "BLOCKED" : "ESCAPED"} — ${name} ${detail}</li>`);
+    };
+    const expectBlocked = async (name, fn) => {
+      try { const r = await fn(); report(name, r === false, r === false ? "" : `(${String(r).slice(0, 60)})`); }
+      catch (e) { report(name, true, `(${e.name})`); }
+    };
+
+    expectBlocked("read parent app DOM", () => window.parent.document.title);
+    expectBlocked("navigate the app window", () => { window.top.location.href = "https://example.com"; return "navigated"; });
+    expectBlocked("Tauri IPC available", () => (window.__TAURI_INTERNALS__ ? "present" : false));
+    expectBlocked("call Tauri command", async () => {
+      if (!window.__TAURI_INTERNALS__) return false;
+      return await window.__TAURI_INTERNALS__.invoke("open_document", { path: "/etc/hosts" });
+    });
+    expectBlocked("fetch file above folder", async () => { const r = await fetch("../README.md"); return r.ok ? "read" : false; });
+    expectBlocked("fetch encoded traversal", async () => { const r = await fetch("..%2FREADME.md"); return r.ok ? "read" : false; });
+    expectBlocked("fetch hidden file", async () => { const r = await fetch(".hidden"); return r.ok ? "read" : false; });
+    expectBlocked("fetch file:// directly", async () => { const r = await fetch("file:///etc/hosts"); return r.ok ? "read" : false; });
+  </script>
+</body>
+</html>

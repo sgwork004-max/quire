@@ -1,0 +1,9 @@
+{
+  "kpis": [
+    { "label": "Revenue", "value": "₹4.2 Cr" },
+    { "label": "Orders", "value": "12,480" },
+    { "label": "Avg. order", "value": "₹3,365" },
+    { "label": "Return rate", "value": "4.1%" }
+  ],
+  "months": [["Jan", 62], ["Feb", 71], ["Mar", 58], ["Apr", 84], ["May", 92], ["Jun", 77]]
+}
