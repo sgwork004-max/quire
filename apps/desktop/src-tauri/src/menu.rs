@@ -23,7 +23,11 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .build()?;
 
     let file = SubmenuBuilder::new(app, "File")
+        .item(&item("new-file", "New HTML File", "CmdOrCtrl+N")?)
         .item(&item("open", "Open…", "CmdOrCtrl+O")?)
+        .item(&item("add-folder", "Add Folder to Library…", "CmdOrCtrl+Shift+O")?)
+        .separator()
+        .item(&item("save", "Save Version", "CmdOrCtrl+S")?)
         .separator()
         .item(&item("close-tab", "Close Tab", "CmdOrCtrl+W")?)
         .separator()
@@ -31,17 +35,28 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .item(&item("open-in-browser", "Open in Browser", "CmdOrCtrl+Shift+B")?)
         .build()?;
 
+    // Undo/redo are custom so one shortcut works across text fields, the code
+    // editor and visual edits inside the document (see App.tsx).
     let edit = SubmenuBuilder::new(app, "Edit")
-        .undo()
-        .redo()
+        .item(&item("undo", "Undo", "CmdOrCtrl+Z")?)
+        .item(&item("redo", "Redo", "CmdOrCtrl+Shift+Z")?)
         .separator()
         .cut()
         .copy()
         .paste()
         .select_all()
+        .separator()
+        .item(&item("search", "Search Library", "CmdOrCtrl+K")?)
         .build()?;
 
     let view = SubmenuBuilder::new(app, "View")
+        .item(&item("library", "Library", "CmdOrCtrl+Shift+L")?)
+        .separator()
+        .item(&item("mode-view", "Preview", "CmdOrCtrl+Alt+1")?)
+        .item(&item("mode-visual", "Visual Editor", "CmdOrCtrl+Alt+2")?)
+        .item(&item("mode-code", "Code Editor", "CmdOrCtrl+Alt+3")?)
+        .item(&item("history", "Version History", "CmdOrCtrl+Shift+H")?)
+        .separator()
         .item(&item("reload", "Reload", "CmdOrCtrl+R")?)
         .item(&item("toggle-sidebar", "Toggle Sidebar", "CmdOrCtrl+\\")?)
         .separator()

@@ -1,0 +1,110 @@
+//! SQLite storage for the library index, tags and version history.
+
+use std::path::{Path, PathBuf};
+use std::sync::{Mutex, MutexGuard};
+
+use rusqlite::Connection;
+
+const MIGRATIONS: &[&str] = &[
+    // v1: library, tags, versions
+    r#"
+    CREATE TABLE locations (
+        id        INTEGER PRIMARY KEY,
+        path      TEXT NOT NULL UNIQUE,
+        name      TEXT NOT NULL,
+        added_ms  INTEGER NOT NULL
+    );
+    CREATE TABLE files (
+        id           INTEGER PRIMARY KEY,
+        path         TEXT NOT NULL UNIQUE,
+        name         TEXT NOT NULL,
+        dir          TEXT NOT NULL,
+        location_id  INTEGER REFERENCES locations(id) ON DELETE SET NULL,
+        title        TEXT,
+        size_bytes   INTEGER NOT NULL DEFAULT 0,
+        modified_ms  INTEGER NOT NULL DEFAULT 0,
+        opened_ms    INTEGER,
+        starred      INTEGER NOT NULL DEFAULT 0,
+        trashed_ms   INTEGER,
+        trash_path   TEXT
+    );
+    CREATE INDEX files_location ON files(location_id);
+    CREATE INDEX files_opened ON files(opened_ms);
+    CREATE VIRTUAL TABLE files_fts USING fts5(name, title, body, tokenize = 'unicode61 remove_diacritics 2');
+    CREATE TABLE tags (
+        id     INTEGER PRIMARY KEY,
+        name   TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        color  TEXT NOT NULL
+    );
+    CREATE TABLE file_tags (
+        file_id  INTEGER NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+        tag_id   INTEGER NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+        PRIMARY KEY (file_id, tag_id)
+    );
+    CREATE TABLE versions (
+        id          INTEGER PRIMARY KEY,
+        path        TEXT NOT NULL,
+        created_ms  INTEGER NOT NULL,
+        updated_ms  INTEGER NOT NULL,
+        source      TEXT NOT NULL,
+        hash        TEXT NOT NULL,
+        size_bytes  INTEGER NOT NULL,
+        content     TEXT NOT NULL,
+        closed      INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX versions_path ON versions(path, created_ms DESC);
+    "#,
+];
+
+pub struct Db {
+    conn: Mutex<Connection>,
+    /// Where trashed files are kept until the trash is emptied.
+    pub trash_dir: PathBuf,
+}
+
+impl Db {
+    pub fn open(data_dir: &Path) -> Result<Self, String> {
+        std::fs::create_dir_all(data_dir).map_err(|e| e.to_string())?;
+        let trash_dir = data_dir.join("trash");
+        std::fs::create_dir_all(&trash_dir).map_err(|e| e.to_string())?;
+        let conn = Connection::open(data_dir.join("quire.db")).map_err(|e| e.to_string())?;
+        conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;")
+            .map_err(|e| e.to_string())?;
+        migrate(&conn)?;
+        Ok(Self { conn: Mutex::new(conn), trash_dir })
+    }
+
+    #[cfg(test)]
+    pub fn open_in_memory(trash_dir: PathBuf) -> Self {
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
+        migrate(&conn).unwrap();
+        Self { conn: Mutex::new(conn), trash_dir }
+    }
+
+    pub fn conn(&self) -> MutexGuard<'_, Connection> {
+        self.conn.lock().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+fn migrate(conn: &Connection) -> Result<(), String> {
+    let version: usize = conn
+        .query_row("PRAGMA user_version", [], |r| r.get(0))
+        .map_err(|e| e.to_string())?;
+    for (i, sql) in MIGRATIONS.iter().enumerate().skip(version) {
+        conn.execute_batch(&format!("BEGIN; {sql} PRAGMA user_version = {}; COMMIT;", i + 1))
+            .map_err(|e| format!("migration {} failed: {e}", i + 1))?;
+    }
+    Ok(())
+}
+
+pub fn now_ms() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis() as i64)
+        .unwrap_or(0)
+}
+
+pub fn err(e: impl std::fmt::Display) -> String {
+    e.to_string()
+}

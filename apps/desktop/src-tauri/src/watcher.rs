@@ -1,12 +1,16 @@
-//! Watches open documents and tells the UI to reload when the HTML or one of
-//! its assets changes on disk, so edits from an editor or an AI tool show up live.
+//! Watches open documents. When the HTML or one of its assets changes on disk
+//! the UI reloads, and changes to the HTML itself are saved to version history
+//! (so an AI tool rewriting a file never loses the previous version).
 
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Mutex;
 
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
+
+use crate::db::Db;
+use crate::versions;
 
 const ASSET_EXTENSIONS: &[&str] = &[
     "css", "js", "mjs", "json", "csv", "svg", "png", "jpg", "jpeg", "gif", "webp", "avif", "woff",
@@ -25,14 +29,19 @@ impl Watchers {
         let file = file.to_path_buf();
         let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
             let Ok(event) = res else { return };
-            if !matches!(
-                event.kind,
-                EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)
-            ) {
+            if !matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_)) {
                 return;
             }
-            if event.paths.iter().any(|p| p == &file || is_asset(p)) {
-                let _ = app.emit("document-changed", &doc_id);
+            let doc_changed = event.paths.iter().any(|p| p == &file);
+            if doc_changed {
+                if let Ok(bytes) = std::fs::read(&file) {
+                    let content = String::from_utf8_lossy(&bytes);
+                    let db = app.state::<Db>();
+                    let _ = versions::record(&db.conn(), &file.to_string_lossy(), &content, "disk");
+                }
+            }
+            if doc_changed || event.paths.iter().any(|p| is_asset(p)) {
+                let _ = app.emit("document-changed", serde_json::json!({ "id": doc_id, "doc": doc_changed }));
             }
         })?;
         watcher.watch(root, RecursiveMode::NonRecursive)?;

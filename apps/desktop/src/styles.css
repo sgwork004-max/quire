@@ -18,6 +18,18 @@
   --accent-soft: rgb(226 81 58 / 0.1);
   --accent-fg: #ffffff;
   --shadow-page: 0 1px 2px rgb(28 25 23 / 0.06), 0 8px 32px -8px rgb(28 25 23 / 0.18);
+  --syntax-tag: #b8432f;
+  --syntax-attr: #8a5a12;
+  --syntax-string: #2f7a4d;
+  --syntax-comment: #a39d97;
+  --syntax-keyword: #7c3aed;
+  --syntax-number: #1d6fb8;
+  --syntax-prop: #1e7f8f;
+  --syntax-fn: #4f46e5;
+  --syntax-selection: rgb(226 81 58 / 0.16);
+  --syntax-match: rgb(234 179 8 / 0.25);
+  --diff-add: rgb(34 160 90 / 0.1);
+  --diff-del: rgb(226 81 58 / 0.1);
   color-scheme: light;
 }
 
@@ -38,6 +50,18 @@
     --accent-hover: #f47b66;
     --accent-soft: rgb(240 102 79 / 0.14);
     --shadow-page: 0 0 0 1px rgb(255 255 255 / 0.06), 0 12px 40px -8px rgb(0 0 0 / 0.6);
+    --syntax-tag: #f0806b;
+    --syntax-attr: #e3b062;
+    --syntax-string: #8fcf9c;
+    --syntax-comment: #6d6762;
+    --syntax-keyword: #c4a5ff;
+    --syntax-number: #7fb8f0;
+    --syntax-prop: #6fcfdc;
+    --syntax-fn: #a5b4fc;
+    --syntax-selection: rgb(240 102 79 / 0.24);
+    --syntax-match: rgb(234 179 8 / 0.22);
+    --diff-add: rgb(52 199 120 / 0.12);
+    --diff-del: rgb(240 102 79 / 0.14);
     color-scheme: dark;
   }
 }
@@ -91,6 +115,12 @@ button {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+/* The code editor and diff text are selectable even though the app chrome is not. */
+.cm-editor, .cm-editor * {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 @keyframes progress {
