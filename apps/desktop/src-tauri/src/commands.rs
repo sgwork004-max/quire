@@ -34,7 +34,10 @@ pub fn open_document(
         }
     }
     let conn = db.conn();
-    library::mark_opened(&conn, &doc.path)?;
+    // Copies of files shared with you live in Quire's own folder, not your library.
+    if !doc.path.starts_with(&db.shared_dir) {
+        library::mark_opened(&conn, &doc.path)?;
+    }
     if let Ok(bytes) = std::fs::read(&doc.path) {
         versions::record(&conn, &info.path, &String::from_utf8_lossy(&bytes), "opened")?;
     }
@@ -72,7 +75,7 @@ pub fn read_document(registry: State<'_, Registry>, id: String) -> R<DocContent>
 }
 
 /// Writes atomically (temp file + rename) so a crash never leaves half a file.
-fn write_file(db: &Db, path: &Path, content: &str, source: &str) -> R<i64> {
+pub(crate) fn write_file(db: &Db, path: &Path, content: &str, source: &str) -> R<i64> {
     let dir = path.parent().ok_or("no parent folder")?;
     let name = path.file_name().ok_or("no file name")?.to_string_lossy();
     let tmp = dir.join(format!(".{name}.quire-tmp"));
@@ -86,8 +89,10 @@ fn write_file(db: &Db, path: &Path, content: &str, source: &str) -> R<i64> {
     }
     let conn = db.conn();
     versions::record(&conn, &path.to_string_lossy(), content, source)?;
-    let location = library::location_for(&conn, path);
-    library::index_file(&conn, path, location)?;
+    if !path.starts_with(&db.shared_dir) {
+        let location = library::location_for(&conn, path);
+        library::index_file(&conn, path, location)?;
+    }
     Ok(library::stat(path).map(|s| s.1).unwrap_or(0))
 }
 

@@ -8,6 +8,7 @@ import { popupMenu } from "../../lib/menu";
 import { IconButton } from "../IconButton";
 import { Logo } from "../Logo";
 import { FileCard, FileRow } from "./FileItems";
+import { SharedView } from "./SharedView";
 
 const SORTS: { id: SortKey; label: string }[] = [
   { id: "modified", label: "Last modified" },
@@ -25,6 +26,8 @@ function viewTitle(view: View, overview: Overview | null): string {
       return "Starred";
     case "trash":
       return "Trash";
+    case "shared":
+      return "Shared with me";
     case "location":
       return overview?.locations.find((l) => l.id === view.id)?.name ?? "Folder";
     case "tag":
@@ -58,7 +61,11 @@ export function LibraryView() {
             <span className="truncate">{viewTitle(view, overview)}</span>
           </h1>
           <p className="mt-0.5 truncate text-[12px] text-ink-3" title={location?.path}>
-            {loaded ? `${files.length} file${files.length === 1 ? "" : "s"}` : "Loading…"}
+            {view.kind === "shared"
+              ? "Files other people shared with you. They stay in sync."
+              : loaded
+                ? `${files.length} file${files.length === 1 ? "" : "s"}`
+                : "Loading…"}
             {location && ` · ${location.path}`}
             {view.kind === "trash" && " · Files are kept for 30 days"}
           </p>
@@ -83,7 +90,7 @@ export function LibraryView() {
           )}
         </label>
 
-        {view.kind === "trash" ? (
+        {view.kind === "shared" ? null : view.kind === "trash" ? (
           <button
             type="button"
             disabled={!files.length}
@@ -120,7 +127,9 @@ export function LibraryView() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-10">
-        {!loaded ? null : files.length === 0 ? (
+        {view.kind === "shared" ? (
+          <SharedView />
+        ) : !loaded ? null : files.length === 0 ? (
           <EmptyView view={view} searching={searching} search={search} overview={overview} />
         ) : showList ? (
           <div className="mx-2 overflow-hidden rounded-xl border border-line bg-surface">
@@ -185,6 +194,7 @@ function EmptyView({ view, searching, search, overview }: { view: View; searchin
     starred: ["No starred files", "Star a file to keep it one click away."],
     trash: ["Trash is empty", "Files you delete stay here for 30 days."],
     location: ["No HTML files in this folder", "Quire is watching it. New files show up automatically."],
+    shared: ["", ""],
     tag: ["Nothing tagged yet", "Right-click a file and choose Tags."],
   };
   const [title, body] = copy[view.kind];

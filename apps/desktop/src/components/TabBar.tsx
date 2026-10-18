@@ -13,8 +13,11 @@ import {
   Scan,
   Smartphone,
   Tablet,
+  Share2,
+  Users,
   X,
 } from "lucide-react";
+import { useCloud } from "../store/cloud";
 import { HOME, useApp, type Mode, type Tab, type Viewport } from "../store/app";
 import { popupMenu } from "../lib/menu";
 import { IconButton } from "./IconButton";
@@ -113,6 +116,33 @@ function DocTab({ tab, active }: { tab: Tab; active: boolean }) {
   );
 }
 
+const ROLE_NOTE = { owner: "", editor: "", commenter: "Can comment", viewer: "View only" } as const;
+
+/** Who else is in this shared file right now. */
+function Presence({ tabId }: { tabId: string }) {
+  const peers = useApp((s) => s.presence[tabId]) ?? [];
+  if (!peers.length) return null;
+  const shown = peers.slice(0, 4);
+  return (
+    <div className="flex items-center -space-x-1.5 pr-1" title={peers.map((p) => p.name).join(", ") + " here now"}>
+      {shown.map((p) => (
+        <span
+          key={p.clientId}
+          className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2 ring-bg"
+          style={{ background: p.color }}
+        >
+          {p.name.trim().slice(0, 1).toUpperCase()}
+        </span>
+      ))}
+      {peers.length > shown.length && (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-active text-[10px] font-semibold text-ink-2 ring-2 ring-bg">
+          +{peers.length - shown.length}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export function TabBar() {
   const tabs = useApp((s) => s.tabs);
   const activeId = useApp((s) => s.activeId);
@@ -165,6 +195,26 @@ export function TabBar() {
 
       {active && (
         <div className="flex shrink-0 items-center gap-1.5">
+          <Presence tabId={active.id} />
+          {active.share && ROLE_NOTE[active.share.role] && (
+            <span className="flex items-center gap-1 rounded-md bg-hover px-2 py-1 text-[11.5px] font-medium text-ink-2">
+              <Users size={12} /> {ROLE_NOTE[active.share.role]}
+            </span>
+          )}
+          {(!active.share || active.share.role === "owner") && (
+            <button
+              type="button"
+              title="Share  ⇧⌘S"
+              onClick={() => useCloud.getState().openShareDialog({ path: active.path, name: active.name })}
+              className={clsx(
+                "flex h-7 items-center gap-1.5 rounded-lg px-2.5 text-[12.5px] font-medium transition-colors",
+                active.share ? "border border-line-strong text-ink hover:bg-hover" : "bg-accent text-accent-fg hover:bg-accent-hover",
+              )}
+            >
+              {active.share ? <Users size={13.5} strokeWidth={2} /> : <Share2 size={13.5} strokeWidth={2} />}
+              {active.share ? "Shared" : "Share"}
+            </button>
+          )}
           <Segmented items={MODES} value={active.mode} onChange={(m) => void setMode(active.id, m)} labels />
           <span className="mx-0.5 h-4 w-px bg-line-strong" />
           <Segmented items={VIEWPORTS} value={viewport} onChange={setViewport} />

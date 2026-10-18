@@ -66,7 +66,11 @@ export function AccountButton() {
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[12.5px] font-medium text-ink">{account.name}</span>
         </span>
-        {offline && <WifiOff size={13} className="shrink-0 text-ink-3" aria-label="Offline" />}
+        {offline && (
+          <span title="Can't reach Quire Cloud. Your files still work; sharing resumes when you're back online." className="shrink-0">
+            <WifiOff size={13} className="text-ink-3" aria-label="Offline" />
+          </span>
+        )}
       </button>
       {open && <ProfilePopover account={account} onClose={() => setOpen(false)} />}
     </div>

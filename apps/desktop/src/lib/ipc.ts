@@ -84,6 +84,53 @@ export interface SignInStart {
   expiresIn: number;
 }
 
+export type ShareRole = "owner" | "editor" | "commenter" | "viewer";
+
+export interface CloudDocument {
+  id: string;
+  title: string;
+  fileName: string;
+  sizeBytes: number;
+  revision: number;
+  updatedAt: number;
+  ownerId: string;
+  ownerName: string;
+  ownerEmail: string;
+  role: ShareRole;
+  memberCount: number;
+}
+
+export interface CloudLink {
+  documentId: string;
+  path: string;
+  role: ShareRole;
+  title: string;
+  ownerName: string | null;
+}
+
+export interface CloudOverview {
+  documents: CloudDocument[];
+  usage: { usedBytes: number; quotaBytes: number };
+  links: CloudLink[];
+}
+
+export interface Member {
+  email: string;
+  role: Exclude<ShareRole, "owner">;
+  name: string | null;
+  image: string | null;
+  pending: boolean;
+}
+
+export interface ShareDetails {
+  id: string;
+  title: string;
+  role: ShareRole;
+  sizeBytes: number;
+  owner: { name: string; email: string; image: string | null };
+  members: Member[];
+}
+
 export const ipc = {
   // account
   account: () => invoke<Account | null>("account"),
@@ -91,6 +138,22 @@ export const ipc = {
   startSignIn: () => invoke<SignInStart>("start_sign_in"),
   cancelSignIn: () => invoke<void>("cancel_sign_in"),
   signOut: () => invoke<void>("sign_out"),
+  // sharing
+  cloudOverview: () => invoke<CloudOverview>("cloud_overview"),
+  cloudLinkForPath: (path: string) => invoke<CloudLink | null>("cloud_link_for_path", { path }),
+  shareFile: (path: string) => invoke<string>("share_file", { path }),
+  shareDetails: (documentId: string) => invoke<ShareDetails>("share_details", { documentId }),
+  shareInvite: (documentId: string, email: string, role: string) =>
+    invoke<{ members: Member[] }>("share_invite", { documentId, email, role }),
+  shareSetRole: (documentId: string, email: string, role: string) =>
+    invoke<{ members: Member[] }>("share_set_role", { documentId, email, role }),
+  shareRemove: (documentId: string, email: string) => invoke<{ members: Member[] }>("share_remove", { documentId, email }),
+  stopSharing: (documentId: string) => invoke<void>("stop_sharing", { documentId }),
+  leaveShared: (documentId: string) => invoke<void>("leave_shared", { documentId }),
+  openShared: (documentId: string) => invoke<string>("open_shared", { documentId }),
+  liveTicket: (documentId: string) => invoke<{ url: string; ticket: string; role: ShareRole }>("live_ticket", { documentId }),
+  setLive: (documentId: string, live: boolean, synced?: string) => invoke<void>("set_live", { documentId, live, synced }),
+  syncNow: () => invoke<void>("sync_now"),
   // documents
   openDocument: (path: string) => invoke<DocumentInfo>("open_document", { path }),
   closeDocument: (id: string) => invoke<void>("close_document", { id }),

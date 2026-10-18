@@ -1,4 +1,6 @@
-import { Annotation, EditorState, Transaction } from "@codemirror/state";
+import { Annotation, Compartment, EditorState, Transaction } from "@codemirror/state";
+import type * as Y from "yjs";
+import { yCollab } from "y-codemirror.next";
 import {
   EditorView,
   crosshairCursor,
@@ -32,6 +34,14 @@ const PREVIEW_DELAY = 250;
 const PreviewUpdate = Annotation.define<"reload" | "silent">();
 const FromDisk = Annotation.define<boolean>();
 
+/** The live (real-time) binding of a session, when the file is shared. */
+export interface LiveBinding {
+  text: Y.Text;
+  awareness: unknown;
+  undoManager: Y.UndoManager | null;
+  readOnly: boolean;
+}
+
 /**
  * The editing state of one open document: a CodeMirror buffer that is the
  * single source of truth for both Code and Visual mode, autosave, the
@@ -50,6 +60,9 @@ export class EditorSession {
   private saveTimer = 0;
   private previewTimer = 0;
   private saving: Promise<void> | null = null;
+  private collab = new Compartment();
+  private readOnlyMode = new Compartment();
+  private liveBinding: LiveBinding | null = null;
 
   constructor(doc: DocumentInfo, content: string) {
     this.id = doc.id;
@@ -86,6 +99,8 @@ export class EditorSession {
           html({ autoCloseTags: true, matchClosingTags: true }),
           EditorView.lineWrapping,
           quireTheme,
+          this.collab.of([]),
+          this.readOnlyMode.of([]),
           EditorView.updateListener.of((u) => {
             if (!u.docChanged) return;
             const tr = u.transactions.find((t) => t.docChanged);
@@ -213,11 +228,51 @@ export class EditorSession {
   }
 
   undo() {
-    undo(this.view);
+    // In a shared file, undo only your own changes, never a collaborator's.
+    if (this.liveBinding?.undoManager) this.liveBinding.undoManager.undo();
+    else undo(this.view);
   }
 
   redo() {
-    redo(this.view);
+    if (this.liveBinding?.undoManager) this.liveBinding.undoManager.redo();
+    else redo(this.view);
+  }
+
+  get isLive() {
+    return this.liveBinding !== null;
+  }
+
+  get readOnly() {
+    return this.liveBinding?.readOnly ?? false;
+  }
+
+  /**
+   * Binds the editor to the shared document. From here on, every change
+   * (typed, visual, or a collaborator's) flows through Yjs, and is still saved
+   * to the local file by autosave.
+   */
+  bindLive(binding: LiveBinding) {
+    this.unbindLive();
+    const remote = binding.text.toString();
+    if (remote !== this.text) {
+      this.view.dispatch({
+        changes: { from: 0, to: this.view.state.doc.length, insert: remote },
+        annotations: [Transaction.userEvent.of("input.remote"), Transaction.addToHistory.of(false)],
+      });
+    }
+    this.liveBinding = binding;
+    this.view.dispatch({
+      effects: [
+        this.collab.reconfigure(yCollab(binding.text, binding.awareness, { undoManager: binding.undoManager ?? false })),
+        this.readOnlyMode.reconfigure(binding.readOnly ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : []),
+      ],
+    });
+  }
+
+  unbindLive() {
+    if (!this.liveBinding) return;
+    this.liveBinding = null;
+    this.view.dispatch({ effects: [this.collab.reconfigure([]), this.readOnlyMode.reconfigure([])] });
   }
 
   // ------------------------------------------------------------ visual edits
@@ -276,6 +331,7 @@ export class EditorSession {
   }
 
   destroy() {
+    this.unbindLive();
     window.clearTimeout(this.saveTimer);
     window.clearTimeout(this.previewTimer);
     this.view.destroy();

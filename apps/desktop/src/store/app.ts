@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { open } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir } from "@tauri-apps/plugin-opener";
-import { errorMessage, HTML_EXTENSIONS, ipc, isHtmlPath, type DocumentInfo } from "../lib/ipc";
+import { errorMessage, HTML_EXTENSIONS, ipc, isHtmlPath, type DocumentInfo, type ShareRole } from "../lib/ipc";
+import { startLive, stopLive } from "../editor/live";
 import { savePref } from "../lib/prefs";
 import { closeSession, ensureSession, getSession } from "../editor/session";
 import { postToFrame } from "../editor/frames";
@@ -21,6 +22,14 @@ export const VIEWPORT_WIDTHS: Record<Viewport, number | null> = {
 
 export interface Tab extends DocumentInfo {
   mode: Mode;
+  /** Set when this file is shared (by you or with you). */
+  share?: { documentId: string; role: ShareRole };
+}
+
+export interface Peer {
+  clientId: number;
+  name: string;
+  color: string;
 }
 
 /** What the bridge reports about the element selected in Visual mode. */
@@ -54,6 +63,8 @@ interface AppState {
   historyOpen: boolean;
   codeWidth: number;
   toasts: Toast[];
+  /** People currently in each shared document, by tab id. */
+  presence: Record<string, Peer[]>;
 
   openPaths: (paths: string[], mode?: Mode) => Promise<void>;
   openDialog: () => Promise<void>;
@@ -85,6 +96,7 @@ export const useApp = create<AppState>((set, get) => ({
   historyOpen: false,
   codeWidth: 520,
   toasts: [],
+  presence: {},
 
   openPaths: async (paths, mode = "view") => {
     const html = paths.filter(isHtmlPath);
@@ -96,6 +108,7 @@ export const useApp = create<AppState>((set, get) => ({
           tabs: s.tabs.some((t) => t.id === doc.id) ? s.tabs : [...s.tabs, { ...doc, mode: "view" }],
         }));
         lastId = doc.id;
+        void startLive(doc.id);
       } catch (err) {
         get().toast(`Couldn't open ${path.split(/[\\/]/).pop()}: ${errorMessage(err)}`);
       }
@@ -116,6 +129,7 @@ export const useApp = create<AppState>((set, get) => ({
   },
 
   closeTab: async (id) => {
+    await stopLive(id);
     await closeSession(id);
     const { tabs, activeId } = get();
     const index = tabs.findIndex((t) => t.id === id);
@@ -146,6 +160,10 @@ export const useApp = create<AppState>((set, get) => ({
   setMode: async (id, mode) => {
     const tab = get().tabs.find((t) => t.id === id);
     if (!tab || tab.mode === mode) return;
+    if (mode !== "view" && tab.share && !["owner", "editor"].includes(tab.share.role)) {
+      get().toast(`You can ${tab.share.role === "commenter" ? "comment on" : "view"} this file. Ask its owner for edit access.`);
+      return;
+    }
     if (mode === "view") {
       const session = getSession(id);
       if (session) {

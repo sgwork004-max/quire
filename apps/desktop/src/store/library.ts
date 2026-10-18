@@ -7,7 +7,7 @@ import { savePref } from "../lib/prefs";
 import { HOME, useApp } from "./app";
 
 export type LibraryView =
-  | { kind: "all" | "recent" | "starred" | "trash" }
+  | { kind: "all" | "recent" | "starred" | "trash" | "shared" }
   | { kind: "location"; id: number }
   | { kind: "tag"; id: number };
 
@@ -60,7 +60,7 @@ const fail = (what: string) => (e: unknown) => toast(`${what}: ${errorMessage(e)
 
 function toQuery(view: LibraryView, search: string, sort: SortKey): LibraryQuery {
   return {
-    view: view.kind,
+    view: view.kind === "shared" ? "all" : view.kind,
     locationId: view.kind === "location" ? view.id : undefined,
     tagId: view.kind === "tag" ? view.id : undefined,
     search: search.trim() || undefined,
@@ -113,6 +113,12 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   refresh: async () => {
     const seq = ++refreshSeq;
     const { view, search, sort } = get();
+    if (view.kind === "shared") {
+      const { useCloud } = await import("./cloud");
+      void useCloud.getState().refresh();
+      set({ overview: await ipc.overview().catch(() => get().overview), files: [], loaded: true });
+      return;
+    }
     try {
       const [overview, files] = await Promise.all([ipc.overview(), ipc.query(toQuery(view, search, sort))]);
       if (seq !== refreshSeq) return; // a newer refresh won
@@ -253,6 +259,12 @@ export const useLibrary = create<LibraryState>((set, get) => ({
             action: () => void useApp.getState().openPaths([file.path], "visual"),
           },
           { text: "Open in Code Editor", action: () => void useApp.getState().openPaths([file.path], "code") },
+          null,
+          {
+            text: "Share…",
+            action: () =>
+              void import("./cloud").then(({ useCloud }) => useCloud.getState().openShareDialog({ path: file.path, name: file.name })),
+          },
           null,
           { text: file.starred ? "Remove Star" : "Star", action: () => void s.toggleStar(file) },
           {

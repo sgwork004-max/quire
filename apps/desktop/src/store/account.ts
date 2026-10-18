@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { errorMessage, ipc, type Account, type SignInStart } from "../lib/ipc";
+import { loadPref, savePref } from "../lib/prefs";
 import { useApp } from "./app";
+import { startLiveForAll, stopLiveForAll } from "../editor/live";
+import { useCloud } from "./cloud";
 
 type Status = "loading" | "signed-out" | "signing-in" | "signed-in";
 
@@ -23,6 +26,9 @@ interface AccountState {
   rename: (name: string) => Promise<void>;
 }
 
+const RETRY_MS = 15_000;
+let retryTimer = 0;
+
 export const useAccount = create<AccountState>((set, get) => ({
   status: "loading",
   account: null,
@@ -31,12 +37,23 @@ export const useAccount = create<AccountState>((set, get) => ({
   offline: false,
 
   load: async () => {
+    window.clearTimeout(retryTimer);
     try {
       const account = await ipc.account();
+      const wasOffline = get().offline;
       set({ account, status: account ? "signed-in" : "signed-out", offline: false });
+      savePref("account", account);
+      if (account) {
+        void useCloud.getState().refresh();
+        startLiveForAll();
+        if (wasOffline) useApp.getState().toast("Back online");
+      }
     } catch {
-      // Offline with a saved session: stay signed in, try again later.
-      set((s) => ({ status: s.account ? "signed-in" : "signed-out", offline: true }));
+      // Can't reach Quire Cloud but a session is saved: stay signed in as the
+      // last known account, keep working locally, and keep trying.
+      const cached = get().account ?? (await loadPref<Account | null>("account")) ?? null;
+      set({ account: cached, status: cached ? "signed-in" : "signed-out", offline: true });
+      retryTimer = window.setTimeout(() => void get().load(), RETRY_MS);
     }
   },
 
@@ -60,9 +77,12 @@ export const useAccount = create<AccountState>((set, get) => ({
   },
 
   signedIn: (account) => {
+    savePref("account", account);
     if (account) {
       set({ account, status: "signed-in", pending: null, error: null, offline: false });
       useApp.getState().toast(`Signed in as ${account.email}`);
+      void useCloud.getState().refresh();
+      startLiveForAll();
     } else {
       set({ account: null, status: "signed-out", pending: null });
     }
@@ -71,8 +91,16 @@ export const useAccount = create<AccountState>((set, get) => ({
   failed: (reason) => set({ error: reason, pending: null }),
 
   signOut: async () => {
+    await stopLiveForAll();
+    // Close copies of files others shared; signing out deletes them from this Mac.
+    const app = useApp.getState();
+    const shared = new Set(useCloud.getState().overview?.links.filter((l) => l.role !== "owner").map((l) => l.path));
+    for (const t of app.tabs) if (shared.has(t.path)) await app.closeTab(t.id);
     await ipc.signOut().catch(() => {});
-    set({ account: null, status: "signed-out" });
+    window.clearTimeout(retryTimer);
+    savePref("account", null);
+    set({ account: null, status: "signed-out", offline: false });
+    useCloud.setState({ overview: null });
   },
 
   rename: async (name) => {

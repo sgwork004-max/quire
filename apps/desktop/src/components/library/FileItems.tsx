@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
-import { FileCode2, MoreHorizontal, Star } from "lucide-react";
+import { FileCode2, MoreHorizontal, Star, Users } from "lucide-react";
+import { useCloud } from "../../store/cloud";
 import type { FileEntry, Tag } from "../../lib/ipc";
 import { formatBytes, parentFolder, relativeTime } from "../../lib/format";
 import { useLibrary } from "../../store/library";
@@ -24,6 +25,16 @@ function Snippet({ text }: { text: string }) {
           p
         ),
       )}
+    </span>
+  );
+}
+
+function SharedBadge({ path }: { path: string }) {
+  const shared = useCloud((s) => s.overview?.links.some((l) => l.path === path && l.role === "owner"));
+  if (!shared) return null;
+  return (
+    <span title="Shared" className="flex shrink-0 items-center text-ink-3">
+      <Users size={12} strokeWidth={2} />
     </span>
   );
 }
@@ -133,6 +144,7 @@ export function FileCard({ file, tags }: { file: FileEntry; tags: Tag[] }) {
           )}
         </div>
         <div className="flex items-center gap-1 pt-1">
+          <SharedBadge path={file.path} />
           <TagDots ids={file.tagIds} tags={tags} />
           <button
             type="button"
@@ -170,6 +182,7 @@ export function FileRow({ file, tags }: { file: FileEntry; tags: Tag[] }) {
           ) : (
             <div className="flex items-center gap-2">
               <span className="truncate text-[13px] text-ink">{displayName(file)}</span>
+              <SharedBadge path={file.path} />
               <TagDots ids={file.tagIds} tags={tags} />
             </div>
           )}

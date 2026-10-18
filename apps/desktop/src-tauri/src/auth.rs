@@ -61,7 +61,9 @@ struct TokenReply {
 
 /// Signed-in state. The token is cached in memory so the Keychain is read once.
 pub struct AuthState {
-    http: reqwest::Client,
+    pub(crate) http: reqwest::Client,
+    /// The signed-in account, once confirmed with the server.
+    pub(crate) current: Mutex<Option<Account>>,
     token: Mutex<Option<String>>,
     loaded: Mutex<bool>,
     /// Bumped to cancel an in-flight sign-in poll.
@@ -76,6 +78,7 @@ impl Default for AuthState {
                 .timeout(Duration::from_secs(20))
                 .build()
                 .expect("http client"),
+            current: Mutex::new(None),
             token: Mutex::new(None),
             loaded: Mutex::new(false),
             attempt: AtomicU64::new(0),
@@ -88,7 +91,7 @@ fn keychain() -> Result<keyring::Entry, String> {
 }
 
 impl AuthState {
-    fn token(&self) -> Option<String> {
+    pub(crate) fn token(&self) -> Option<String> {
         let mut loaded = self.loaded.lock().unwrap();
         if !*loaded {
             *loaded = true;
@@ -107,6 +110,9 @@ impl AuthState {
             },
         }
         *self.loaded.lock().unwrap() = true;
+        if token.is_none() {
+            *self.current.lock().unwrap() = None;
+        }
         *self.token.lock().unwrap() = token;
         Ok(())
     }
@@ -128,7 +134,9 @@ impl AuthState {
             let body: serde_json::Value = res.json().await.unwrap_or_default();
             return Err(body["error"].as_str().unwrap_or("Request failed").to_string());
         }
-        res.json().await.map(Some).map_err(|e| e.to_string())
+        let account: Account = res.json().await.map_err(|e| e.to_string())?;
+        *self.current.lock().unwrap() = Some(account.clone());
+        Ok(Some(account))
     }
 }
 
@@ -196,6 +204,8 @@ pub async fn sign_out(app: AppHandle, state: tauri::State<'_, AuthState>) -> Res
             .await;
     }
     state.set_token(None)?;
+    // Files other people shared are removed so the next person on this Mac can't see them.
+    crate::cloud::clear_shared_copies(&app.state::<crate::db::Db>());
     let _ = app.emit("auth-changed", Option::<Account>::None);
     Ok(())
 }

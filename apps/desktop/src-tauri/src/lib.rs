@@ -1,5 +1,7 @@
+mod assets;
 mod auth;
 mod browser;
+mod cloud;
 mod commands;
 mod db;
 mod documents;
@@ -67,6 +69,7 @@ pub fn run() {
         .manage(scan::LocationWatchers::default())
         .manage(PendingOpens::default())
         .manage(auth::AuthState::default())
+        .manage(cloud::Cloud::default())
         .register_asynchronous_uri_scheme_protocol(documents::SCHEME, |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || {
@@ -90,6 +93,7 @@ pub fn run() {
                 scan::start_location(&handle, id, root);
             }
             app.state::<PendingOpens>().push(&handle, cli_paths());
+            cloud::start(&handle);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -128,6 +132,19 @@ pub fn run() {
             auth::start_sign_in,
             auth::cancel_sign_in,
             auth::sign_out,
+            cloud::cloud_overview,
+            cloud::cloud_link_for_path,
+            cloud::share_file,
+            cloud::share_details,
+            cloud::share_invite,
+            cloud::share_set_role,
+            cloud::share_remove,
+            cloud::stop_sharing,
+            cloud::leave_shared,
+            cloud::open_shared,
+            cloud::live_ticket,
+            cloud::set_live,
+            cloud::sync_now,
             ui_log,
         ])
         .build(tauri::generate_context!())

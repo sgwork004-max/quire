@@ -54,12 +54,31 @@ const MIGRATIONS: &[&str] = &[
     );
     CREATE INDEX versions_path ON versions(path, created_ms DESC);
     "#,
+    // v2: links between local files and shared cloud documents
+    r#"
+    CREATE TABLE cloud_links (
+        document_id  TEXT PRIMARY KEY,
+        -- The owner's original file, or the local cached copy for recipients.
+        path         TEXT NOT NULL UNIQUE,
+        account_id   TEXT NOT NULL,
+        role         TEXT NOT NULL,
+        title        TEXT NOT NULL,
+        owner_name   TEXT,
+        revision     INTEGER NOT NULL DEFAULT 0,
+        -- Text known to be identical locally and in the cloud: the merge base.
+        synced       TEXT NOT NULL DEFAULT '',
+        -- Fingerprint of the last asset list pushed or pulled.
+        assets_sig   TEXT NOT NULL DEFAULT ''
+    );
+    "#,
 ];
 
 pub struct Db {
     conn: Mutex<Connection>,
     /// Where trashed files are kept until the trash is emptied.
     pub trash_dir: PathBuf,
+    /// Local copies of files other people shared with you.
+    pub shared_dir: PathBuf,
 }
 
 impl Db {
@@ -67,11 +86,14 @@ impl Db {
         std::fs::create_dir_all(data_dir).map_err(|e| e.to_string())?;
         let trash_dir = data_dir.join("trash");
         std::fs::create_dir_all(&trash_dir).map_err(|e| e.to_string())?;
+        let shared_dir = data_dir.join("shared");
+        std::fs::create_dir_all(&shared_dir).map_err(|e| e.to_string())?;
+        let shared_dir = std::fs::canonicalize(&shared_dir).map_err(|e| e.to_string())?;
         let conn = Connection::open(data_dir.join("quire.db")).map_err(|e| e.to_string())?;
         conn.execute_batch("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 3000;")
             .map_err(|e| e.to_string())?;
         migrate(&conn)?;
-        Ok(Self { conn: Mutex::new(conn), trash_dir })
+        Ok(Self { conn: Mutex::new(conn), trash_dir, shared_dir })
     }
 
     #[cfg(test)]
@@ -79,7 +101,8 @@ impl Db {
         let conn = Connection::open_in_memory().unwrap();
         conn.execute_batch("PRAGMA foreign_keys = ON;").unwrap();
         migrate(&conn).unwrap();
-        Self { conn: Mutex::new(conn), trash_dir }
+        let shared_dir = trash_dir.with_file_name("shared");
+        Self { conn: Mutex::new(conn), trash_dir, shared_dir }
     }
 
     pub fn conn(&self) -> MutexGuard<'_, Connection> {

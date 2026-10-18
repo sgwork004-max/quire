@@ -18,6 +18,8 @@ import { LibraryView } from "./components/library/LibraryView";
 import { DropOverlay } from "./components/DropOverlay";
 import { Toasts } from "./components/Toasts";
 import { SignInDialog } from "./components/Account";
+import { ShareDialog } from "./components/ShareDialog";
+import { useCloud } from "./store/cloud";
 
 const app = () => useApp.getState();
 const library = () => useLibrary.getState();
@@ -57,6 +59,10 @@ const MENU_ACTIONS: Record<string, () => void> = {
     void (getSession(tab.id)?.flush() ?? Promise.resolve())
       .then(() => ipc.checkpoint(tab.id))
       .then(() => app().toast("Version saved. Your next edit starts a new one."));
+  },
+  share: () => {
+    const tab = activeTab(app());
+    if (tab && (!tab.share || tab.share.role === "owner")) useCloud.getState().openShareDialog({ path: tab.path, name: tab.name });
   },
   "close-tab": () => {
     const { activeId, closeTab } = app();
@@ -104,6 +110,10 @@ export default function App() {
       listen<string>("menu", (e) => MENU_ACTIONS[e.payload]?.()),
       listen<string[]>("open-paths", (e) => void app().openPaths(e.payload)),
       listen("library-changed", () => library().refreshSoon()),
+      listen("cloud-changed", () => {
+        useCloud.getState().refreshSoon();
+        library().refreshSoon();
+      }),
       listen<Account | null>("auth-changed", (e) => useAccount.getState().signedIn(e.payload)),
       listen<string>("auth-failed", (e) => useAccount.getState().failed(e.payload)),
       listen<{ id: string; doc: boolean }>("document-changed", (e) => {
@@ -164,6 +174,7 @@ export default function App() {
       </main>
       {dragging && <DropOverlay />}
       <SignInDialog />
+      <ShareDialog />
       <Toasts />
     </div>
   );

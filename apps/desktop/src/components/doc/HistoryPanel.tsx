@@ -10,6 +10,7 @@ export const SOURCE_LABEL: Record<string, string> = {
   disk: "Changed outside Quire",
   edit: "Edited in Quire",
   restore: "Restored",
+  remote: "Changed by a collaborator",
 };
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" });

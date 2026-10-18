@@ -5,6 +5,15 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "DocRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["DocRoom"] }],
+  "r2_buckets": [{ "binding": "BLOBS", "bucket_name": "quire-blobs" }],
+  "vars": {
+    // Free plan: total shared content per owner, in megabytes.
+    "QUOTA_MB": "100"
+  },
   "d1_databases": [
     {
       "binding": "DB",

@@ -4,6 +4,9 @@ import { createMiddleware } from "hono/factory";
 import { createAuth, type Auth } from "./auth";
 import type { Env } from "./env";
 import { devicePage } from "./pages";
+import { live, sharing } from "./sharing";
+
+export { DocRoom } from "./room";
 
 type Vars = { auth: Auth; user: { id: string; name: string; email: string; image?: string | null } | null };
 type AppEnv = { Bindings: Env; Variables: Vars };
@@ -59,5 +62,10 @@ app.patch("/api/me", requireUser, async (c) => {
   const u = c.get("user")!;
   return c.json({ id: u.id, name, email: u.email, image: u.image ?? null });
 });
+
+app.use("/api/documents/*", requireUser);
+app.use("/api/documents", requireUser);
+app.route("/api/documents", sharing);
+app.get("/live/:id", live);
 
 export default app;

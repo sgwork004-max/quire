@@ -16,8 +16,8 @@ Quire is **local-first**. Your HTML files live on your computer and never leave 
 Desktop app (Tauri)                         Quire Cloud (Cloudflare)
 ├─ Library, editor, history (local)         ├─ Worker: API + auth          apps/cloud
 ├─ quire:// sandboxed viewer                ├─ D1: accounts, documents, permissions
-├─ Session token in macOS Keychain ──HTTPS──┤  R2: shared assets + snapshots      (Step B)
-└─ Sync client ───────────────WebSocket─────┴─ Durable Objects: real-time rooms   (Step C)
+├─ Session token in macOS Keychain ──HTTPS──┤  R2: shared assets (by content hash)
+└─ Sync client ───────────────WebSocket─────┴─ Durable Objects: one live room per document
 ```
 
 | Concern | Choice | Why |
@@ -35,7 +35,7 @@ Desktop app (Tauri)                         Quire Cloud (Cloudflare)
 - The token is stored in the macOS Keychain and sent as `Authorization: Bearer`. Sessions last 60 days and slide forward while used. Signing out revokes it on the server.
 - Rate limits are stored in D1 so they hold across Worker isolates. Email codes expire in 10 minutes and allow 5 attempts.
 
-## Sharing (Step B, next)
+## Sharing (Step B, done)
 
 - `documents` (id, owner, title, size, created), `members` (document, user or pending email, role), `invites`.
 - Roles: **Owner**, **Editor**, **Commenter**, **Viewer**. Permission checks happen on the server for every request.
@@ -43,11 +43,27 @@ Desktop app (Tauri)                         Quire Cloud (Cloudflare)
 - Recipients see **Shared with me** in the sidebar; files are cached locally for instant, offline opening.
 - Shared HTML is only ever rendered in the sandboxed viewer (and, on the web, from a separate user-content domain).
 
-## Real time (Step C)
+## Real time (Step C, done)
 
 - Each shared document is a Yjs document (`Y.Text` of the HTML source) living in a Durable Object.
 - The object checks the caller's role on connect: viewers and commenters get read-only sync; editors can write.
 - The owner's desktop applies remote edits to the file on disk; local edits (including from other apps or AI tools) are diffed into the Yjs document.
+
+## How sync works on the desktop
+
+- `cloud_links` (desktop SQLite) links a local file to a cloud document: the owner's original, or for recipients a copy in `~/Library/Application Support/app.quire.desktop/shared/<id>/`. Recipient copies are deleted on sign-out.
+- An open shared file connects live: the CodeMirror buffer is bound to the room's `Y.Text`, so typing, visual edits and collaborators' edits all flow through Yjs, and autosave still writes the local file. Undo only undoes your own changes.
+- Files not open live are synced every few seconds by `cloud.rs`: local edits (including other apps and AI tools) are pushed as a three-way merge against `synced`, the last text both sides agreed on; remote changes are pulled when there are no unpushed local edits.
+- Assets are found by scanning the page (and its CSS/JS) for relative references inside its folder, uploaded once per content hash, and downloaded into recipients' copies.
+
+## Testing sharing locally
+
+```bash
+pnpm dev:cloud                                   # terminal 1, log in a file you can read
+node apps/cloud/scripts/smoke.mjs <wrangler-log>  # 27 end-to-end checks: roles, assets, merges, live sync, revocation
+node apps/cloud/scripts/peer.mjs <wrangler-log> someone@example.com '<p>hi</p>' 30
+                                                 # a second person editing live, for testing with the app
+```
 
 ## Cost controls
 

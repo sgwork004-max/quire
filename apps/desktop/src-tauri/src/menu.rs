@@ -28,6 +28,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .item(&item("add-folder", "Add Folder to Library…", "CmdOrCtrl+Shift+O")?)
         .separator()
         .item(&item("save", "Save Version", "CmdOrCtrl+S")?)
+        .item(&item("share", "Share…", "CmdOrCtrl+Shift+S")?)
         .separator()
         .item(&item("close-tab", "Close Tab", "CmdOrCtrl+W")?)
         .separator()

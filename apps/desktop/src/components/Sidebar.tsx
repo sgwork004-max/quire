@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { useState, type ReactNode } from "react";
-import { Clock, Folder, FolderPlus, Library, PanelLeftClose, Plus, Star, Trash2 } from "lucide-react";
+import { Clock, Folder, FolderPlus, Library, PanelLeftClose, Plus, Star, Trash2, Users } from "lucide-react";
+import { useCloud } from "../store/cloud";
 import { HOME, useApp } from "../store/app";
 import { useLibrary, type LibraryView } from "../store/library";
 import { popupMenu } from "../lib/menu";
@@ -18,6 +19,7 @@ export function Sidebar() {
   const { setView, addFolder, folderMenu, newFile } = useLibrary.getState();
   const { toggleSidebar, openDialog } = useApp.getState();
   const [creatingTag, setCreatingTag] = useState(false);
+  const sharedCount = useCloud((s) => s.overview?.documents.filter((d) => d.role !== "owner").length);
 
   const isActive = (v: LibraryView) => onHome && same(view, v);
 
@@ -52,6 +54,7 @@ export function Sidebar() {
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 [scrollbar-width:thin]">
         <NavItem icon={<Library size={15} strokeWidth={1.75} />} label="All files" count={overview?.all} active={isActive({ kind: "all" })} onClick={() => setView({ kind: "all" })} />
         <NavItem icon={<Clock size={15} strokeWidth={1.75} />} label="Recent" active={isActive({ kind: "recent" })} onClick={() => setView({ kind: "recent" })} />
+        <NavItem icon={<Users size={15} strokeWidth={1.75} />} label="Shared with me" count={sharedCount || undefined} active={isActive({ kind: "shared" })} onClick={() => setView({ kind: "shared" })} />
         <NavItem icon={<Star size={15} strokeWidth={1.75} />} label="Starred" count={overview?.starred || undefined} active={isActive({ kind: "starred" })} onClick={() => setView({ kind: "starred" })} />
 
         <Section title="Folders" action={{ label: "Add folder", onClick: () => void addFolder(), icon: <FolderPlus size={13} strokeWidth={2} /> }}>
