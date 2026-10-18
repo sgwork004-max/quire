@@ -5,8 +5,8 @@ Quire is built in phases. Each phase ships something usable.
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 0. Foundations | Tauri shell, design tokens, open from Finder / drag / ⌘O, tabs, recents, sandboxed viewer, live reload, device-width previews | Done |
-| 1. Library | Watched folders, thumbnails, folders and tags, star, search (names and content), trash | Next |
-| 2. Editing | Code view with live preview, visual text/image editing, style panel, autosave, version history | |
+| 1. Library | Watched folders, live thumbnails, tags, stars, full-text search, trash with restore | Done |
+| 2. Editing | Code editor with live preview, visual text/image editing, style panel, autosave, conflict handling, version history with diff and restore | Done |
 | 3. Cloud and sharing | Accounts, sync, Owner / Editor / Commenter / Viewer roles, link sharing, folder inheritance, web viewer for link recipients, `quire.page` user-content domain | |
 | 4. Live collaboration | Yjs + Hocuspocus, presence, cursors, code and visual edits in one shared document | |
 | 5. Comments and review | Element-pinned comments, threads, mentions, suggestion mode, notifications | |

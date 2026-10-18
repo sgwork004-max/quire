@@ -276,7 +276,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   addFolder: async (path) => {
     let folder = path;
     if (!folder) {
-      const picked = await open({ directory: true, title: "Add a folder to your library" });
+      const picked = await open({ directory: true, title: "Choose a folder. Quire adds every HTML file inside it." });
       if (typeof picked !== "string") return;
       folder = picked;
     }

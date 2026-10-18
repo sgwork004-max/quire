@@ -4,12 +4,15 @@
 
 AI tools now produce HTML all the time: dashboards, reports, one-pagers, prototypes. There is still no app that plays the role Preview plays for PDFs. Quire is that app, with Google Docs-style sharing on top: send a link, choose who can view, comment or edit, and everyone always sees the latest version.
 
-> Status: early development (Phase 0). See [docs/ROADMAP.md](docs/ROADMAP.md).
+> Status: early development (Phases 0–2 done: viewer, library, editing). See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## What works today
 
 - Native macOS app (Tauri). Opens any `.html` from Finder, "Open With", drag and drop, or ⌘O
-- Tabs, recent files, sidebar
+- Library: add folders and Quire indexes every HTML file in them, kept in sync with disk. Live thumbnails, tags, stars, full-text search (⌘K), trash with restore
+- Visual editor: click to select, double-click text to edit, style panel, replace images, duplicate and delete
+- Code editor with live preview; both editors share one undo history and only change the bytes you touch
+- Autosave, and a version history of every change (including changes made by other apps or AI tools), with diff and restore
 - Sandboxed viewer: each file can only load assets from its own folder, never hidden files, never the app itself
 - Live reload when the file or its CSS/JS/JSON changes on disk
 - Device-width previews: fit, desktop 1440, tablet 768, mobile 390
