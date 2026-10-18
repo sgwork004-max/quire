@@ -7,8 +7,8 @@ Quire is built in phases. Each phase ships something usable.
 | 0. Foundations | Tauri shell, design tokens, open from Finder / drag / ⌘O, tabs, recents, sandboxed viewer, live reload, device-width previews | Done |
 | 1. Library | Watched folders, live thumbnails, tags, stars, full-text search, trash with restore | Done |
 | 2. Editing | Code editor with live preview, visual text/image editing, style panel, autosave, conflict handling, version history with diff and restore | Done |
-| 3. Cloud and sharing | Accounts, sharing by email with Owner/Editor/Commenter/Viewer roles, Shared with me, assets in R2, storage quotas. Later: share links, folder sharing, web viewer for link recipients on a `quire.page` domain | Done locally; deploy pending |
-| 4. Live collaboration | Yjs in Durable Objects, presence, live cursors, code and visual edits in one shared document | Done locally |
+| 3. Cloud and sharing | Accounts, sharing by email with Owner/Editor/Commenter/Viewer roles, Shared with me, assets in R2, storage quotas. Later: share links, folder sharing, web viewer for link recipients on a `quire.page` domain | Done, live on Cloudflare |
+| 4. Live collaboration | Yjs in Durable Objects, presence, live cursors, code and visual edits in one shared document | Done, live on Cloudflare |
 | 5. Comments and review | Element-pinned comments, threads, mentions, suggestion mode, notifications | |
 | 6. Power features | AI edit (bring your own key), MCP server + CLI so AI tools publish straight to Quire, live data sources, export to PDF/PNG, templates | |
 | 7. Launch | Abuse prevention for public pages, security review, self-host Docker image, docs site, billing for the hosted plan | |

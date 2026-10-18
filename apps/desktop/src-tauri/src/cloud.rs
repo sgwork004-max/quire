@@ -197,11 +197,15 @@ fn link(db: &Db, document_id: &str) -> R<Option<Link>> {
         .map_err(err)
 }
 
-fn link_by_path(db: &Db, path: &str) -> R<Option<Link>> {
-    db.conn()
+/// The link for a file, only if it belongs to `account`. Links made by another
+/// account (or against another server) are stale for this one.
+fn link_by_path(db: &Db, path: &str, account: &str) -> R<Option<Link>> {
+    let link = db
+        .conn()
         .query_row(&format!("SELECT {LINK_COLUMNS} FROM cloud_links WHERE path = ?1"), [path], link_from_row)
         .optional()
-        .map_err(err)
+        .map_err(err)?;
+    Ok(link.filter(|l| l.account_id == account))
 }
 
 fn save_link(db: &Db, l: &Link) -> R<()> {
@@ -453,8 +457,9 @@ pub async fn cloud_overview(auth: State<'_, AuthState>, db: State<'_, Db>) -> R<
 
 /// Links this file is part of, if any (used to show roles and sharing state).
 #[tauri::command]
-pub fn cloud_link_for_path(db: State<'_, Db>, path: String) -> R<Option<Link>> {
-    link_by_path(&db, &path)
+pub async fn cloud_link_for_path(auth: State<'_, AuthState>, db: State<'_, Db>, path: String) -> R<Option<Link>> {
+    let account = ensure_account(&auth).await?;
+    link_by_path(&db, &path, &account)
 }
 
 /// Shares a local file: creates the cloud document and uploads what it uses.
@@ -468,9 +473,11 @@ pub async fn share_file(app: AppHandle, path: String) -> R<String> {
     if path.starts_with(&db.shared_dir) {
         return Err("This is someone else's file. Only its owner can share it.".into());
     }
-    if let Some(l) = link_by_path(&db, &path_str)? {
+    if let Some(l) = link_by_path(&db, &path_str, &account)? {
         return Ok(l.document_id);
     }
+    // A link left by another account or server would block this file's row.
+    db.conn().execute("DELETE FROM cloud_links WHERE path = ?1", [&path_str]).map_err(err)?;
     let html = std::fs::read_to_string(&path).map_err(err)?;
     let file_name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
     let title = crate::extract::extract(&html).title.unwrap_or_else(|| file_name.clone());

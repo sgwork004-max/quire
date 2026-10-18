@@ -71,6 +71,12 @@ node apps/cloud/scripts/peer.mjs <wrangler-log> someone@example.com '<p>hi</p>' 
 - HTML is stored compressed; assets are deduplicated by hash.
 - Cloud copies of documents with no activity for 60 days are evicted and re-uploaded by the owner's app on demand.
 
+## Production
+
+- Quire Cloud runs at `https://quire-cloud.quire-cloud.workers.dev` (D1 `quire`, R2 `quire-blobs`, Durable Object `DocRoom`). Release builds of the app use it; debug builds use `localhost:8787` unless built with `QUIRE_API_URL`.
+- Sign-in is Google only until an email sender (Resend + a domain you own) is configured; then set `RESEND_API_KEY` and `EMAIL_FROM` as secrets.
+- Deploy: `cd apps/cloud && pnpm db:migrate:remote && pnpm deploy`.
+
 ## Local development
 
 ```bash
