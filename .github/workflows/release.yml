@@ -63,3 +63,18 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           args: ${{ matrix.args }}
+      # Fixed names so the website's download buttons always get the latest
+      # version: releases/latest/download/Quire-mac.dmg (and -windows-setup.exe).
+      - name: Upload with stable names
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          shopt -s nullglob
+          dir=apps/desktop/src-tauri/target
+          for f in $dir/*/release/bundle/dmg/*.dmg $dir/release/bundle/dmg/*.dmg; do cp "$f" Quire-mac.dmg; done
+          for f in $dir/release/bundle/nsis/*-setup.exe; do cp "$f" Quire-windows-setup.exe; done
+          for f in Quire-mac.dmg Quire-windows-setup.exe; do
+            [ -f "$f" ] && gh release upload "${{ github.ref_name }}" "$f" --clobber --repo "${{ github.repository }}"
+          done
+          true
