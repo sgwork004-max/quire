@@ -107,8 +107,9 @@ h2{font-size:clamp(30px,3.8vw,46px);margin:0}
 .bento .stage{min-height:150px}
 .b1 .stage,.b2 .stage{padding:0;place-items:start}
 /* Crops show whole cards; contain + matching backgrounds means nothing is ever cut off. */
-.b1 .stage{position:relative;min-height:300px;background:var(--bg)}.b2 .stage{position:relative;min-height:420px;background:var(--paper)}
-.b1 picture,.b1 img,.b2 picture,.b2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top center}
+.b1 .stage{position:relative;min-height:340px;background:var(--bg)}.b2 .stage{position:relative;min-height:420px;background:var(--paper)}
+.b1 picture,.b2 picture{position:absolute;inset:20px}
+.b1 img,.b2 img{width:100%;height:100%;object-fit:contain;object-position:center;border-radius:8px}
 .search{width:100%;max-width:260px}
 .search .box{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:9px;background:var(--surface);border:1.5px solid var(--blue);font-size:13.5px;box-shadow:0 0 0 4px var(--blue-soft)}
 .search .hit{margin-top:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--text-2)}
@@ -185,9 +186,10 @@ footer .grow{flex:1}
   .bento{grid-template-columns:repeat(2,minmax(0,1fr))}
   .b1,.b2,.b5,.b6{grid-column:span 2}.b2{grid-row:auto}.b3,.b4{grid-column:span 1}
   .b2 .stage{min-height:520px}
+  .b1 .stage{min-height:0;aspect-ratio:16/10}
   .split{gap:32px}
 }
-@media (max-width:520px){.b3,.b4{grid-column:span 2}.mark{white-space:normal}}
+@media (max-width:520px){.wide{display:none}.b3,.b4{grid-column:span 2}.mark{white-space:normal}}
 @media (prefers-reduced-motion:no-preference){
   .js .rise{opacity:0;transform:translateY(16px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
   .js .rise.in{opacity:1;transform:none}
@@ -234,10 +236,10 @@ footer .grow{flex:1}
 </div></section>
 
 <section id="features" class="paper inks"><div class="wrap">
-  <div class="head rise"><h2 class="display">Built for working with HTML, not just opening it.</h2></div>
+  <div class="head rise"><h2 class="display">Built for working with HTML,<br class="wide"> not just opening it.</h2></div>
   <div class="bento">
-    <div class="tile b1 rise"><div class="stage"><picture><source srcset="img/grid-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/grid.jpg" alt="Live previews of eight HTML files in a grid."></picture></div><div class="cap"><b>See every page at a glance</b><span>Live previews, not file icons.</span></div></div>
-    <div class="tile b2 rise"><div class="stage"><picture><source srcset="img/sidebar-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/sidebar.jpg" alt="Sidebar with folders, tags and Mac folders."></picture></div><div class="cap"><b>Folders and tags</b><span>Organise inside the app.</span></div></div>
+    <div class="tile b1 rise"><div class="stage"><picture><source srcset="img/grid-dark-2.jpg" media="(prefers-color-scheme: dark)"><img src="img/grid-2.jpg" alt="Live previews of eight HTML files in a grid."></picture></div><div class="cap"><b>See every page at a glance</b><span>Live previews, not file icons.</span></div></div>
+    <div class="tile b2 rise"><div class="stage"><picture><source srcset="img/sidebar-dark-2.jpg" media="(prefers-color-scheme: dark)"><img src="img/sidebar-2.jpg" alt="Sidebar with folders, tags and Mac folders."></picture></div><div class="cap"><b>Folders and tags</b><span>Organise inside the app.</span></div></div>
     <div class="tile b3 rise"><div class="stage"><div class="search"><div class="box">⌕ footfall</div><div class="hit"><b>Pune stores — October</b>…orders and <mark>footfall</mark> across 6 stores</div></div></div><div class="cap"><b>Search inside pages</b><span>Names, titles and every word.</span></div></div>
     <div class="tile b4 rise"><div class="stage"><div class="hist"><div><span>Now</span><span class="by">Claude</span></div><div><span>Yesterday 6:40</span><span>You</span></div><div><span>Mon 11:02</span><span>Imported</span></div></div></div><div class="cap"><b>Every version kept</b><span>Restore anything.</span></div></div>
     <div class="tile b5 rise"><div class="stage"><div class="seg"><span>Preview</span><span class="on">Visual</span><span>Code</span></div></div><div class="cap"><b>Click to edit, or open the code</b><span>Fix a number without touching HTML.</span></div></div>
