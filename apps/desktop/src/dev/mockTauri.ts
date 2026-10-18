@@ -7,7 +7,7 @@ import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 const now = Date.now();
 const doc = (body: string, bg = "#fff", color = "#1f2937") =>
   "data:text/html;charset=utf-8," +
-  encodeURIComponent(`<!doctype html><meta charset="utf-8"><body style="margin:0;font:14px/1.5 -apple-system,system-ui,sans-serif;background:${bg};color:${color}">${body}</body>`);
+  encodeURIComponent(`<!doctype html><meta charset="utf-8"><body style="margin:0;font:14px/1.5 -apple-system,system-ui,sans-serif;background:${bg};color:${color}">${body}</body><!--`); // the thumbnail's ?t= cache-buster lands in this comment
 const bars = (hs: number[], c: string) =>
   `<div style="display:flex;align-items:flex-end;gap:10px;height:170px;border-bottom:1px solid #e5e7eb">${hs.map((h) => `<span style="flex:1;height:${h}%;background:${c};border-radius:4px 4px 0 0"></span>`).join("")}</div>`;
 const kpis = (items: [string, string, string][], border = "#e5e7eb") =>

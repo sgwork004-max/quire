@@ -53,7 +53,7 @@ export function homePage(): string {
     "Quire: a home for your HTML",
     `<h1>Quire</h1>
 <p class="lede">A free, open-source Mac and Windows app to view, organise, edit and share HTML files, like the dashboards, reports and pages AI tools make for you.</p>
-<a class="btn" href="${REPO}/releases/latest">Download</a><a class="btn ghost" href="${REPO}#readme">How it works</a>
+<a class="btn" href="https://getquire.pages.dev">Visit the Quire website</a><a class="btn ghost" href="${REPO}/releases/latest">Download</a>
 <h2>Install on a Mac</h2>
 <p>Open Terminal and paste:</p>
 <pre>curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh</pre>

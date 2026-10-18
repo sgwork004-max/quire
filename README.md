@@ -18,6 +18,8 @@ AI tools now produce HTML all the time: dashboards, reports, one-pagers, prototy
 - Device-width previews: fit, desktop 1440, tablet 768, mobile 390
 - Show in Finder, Open in Browser
 
+**Website:** https://getquire.pages.dev
+
 ## Install
 
 **Mac** (Apple Silicon and Intel), in Terminal:
