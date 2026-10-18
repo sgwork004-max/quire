@@ -32,10 +32,16 @@ echo "Downloading…"
 curl -fL --progress-bar "$URL" -o "$TMP/Quire.app.tar.gz"
 tar -xzf "$TMP/Quire.app.tar.gz" -C "$TMP"
 
+# Quit a running copy and wait for it to exit before replacing it.
 osascript -e 'quit app "Quire"' >/dev/null 2>&1 || true
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  pgrep -f "/Applications/Quire.app/Contents/MacOS/" >/dev/null 2>&1 || break
+  sleep 0.5
+done
 rm -rf /Applications/Quire.app
 mv "$TMP/Quire.app" /Applications/Quire.app
 xattr -dr com.apple.quarantine /Applications/Quire.app 2>/dev/null || true
 
 echo "Quire is installed in Applications. Opening it…"
-open /Applications/Quire.app
+sleep 1
+open /Applications/Quire.app || echo "Open Quire from your Applications folder."

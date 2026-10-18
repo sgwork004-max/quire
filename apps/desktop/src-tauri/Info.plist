@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSDownloadsFolderUsageDescription</key>
+  <string>Quire brings HTML pages you download (for example from ChatGPT or Claude) into your library. Your Downloads folder is never changed.</string>
+  <key>NSDocumentsFolderUsageDescription</key>
+  <string>Quire shows HTML files from the folders you add to your library.</string>
+  <key>NSDesktopFolderUsageDescription</key>
+  <string>Quire shows HTML files from the folders you add to your library.</string>
+</dict>
+</plist>

@@ -170,6 +170,9 @@ fn start_watching(app: &AppHandle) -> Result<(), String> {
 }
 
 /// Called at startup. Import is on unless the user switched it off.
+///
+/// Runs off the main thread: the first read of ~/Downloads makes macOS ask
+/// the user for permission, and that must never hold up the window opening.
 pub fn start(app: &AppHandle) {
     let db = app.state::<Db>();
     let enabled = setting(&db.conn(), ENABLED).map(|v| v == "1").unwrap_or(true);
@@ -177,9 +180,14 @@ pub fn start(app: &AppHandle) {
         let _ = set_setting(&db.conn(), SINCE, &now_ms().to_string());
     }
     if enabled {
-        if let Err(e) = start_watching(app) {
-            eprintln!("downloads import: {e}");
-        }
+        let app = app.clone();
+        std::thread::spawn(move || {
+            // Let the window appear before macOS shows its permission prompt.
+            std::thread::sleep(Duration::from_secs(2));
+            if let Err(e) = start_watching(&app) {
+                eprintln!("downloads import: {e}");
+            }
+        });
     }
 }
 
