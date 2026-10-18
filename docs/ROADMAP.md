@@ -10,7 +10,7 @@ Quire is built in phases. Each phase ships something usable.
 | 3. Cloud and sharing | Accounts, sharing by email with Owner/Editor/Commenter/Viewer roles, Shared with me, assets in R2, storage quotas. Later: share links, folder sharing, web viewer for link recipients on a `quire.page` domain | Done, live on Cloudflare |
 | 4. Live collaboration | Yjs in Durable Objects, presence, live cursors, code and visual edits in one shared document | Done, live on Cloudflare |
 | 5. Comments and review | Comments pinned to elements (anchored with Yjs relative positions), threads, @mentions, resolve/reopen, live updates, in-app notifications. Later: email notifications, suggestion mode | Done, live on Cloudflare |
-| 6. Power features | MCP server + `quire` CLI (Claude creates, finds and updates HTML in your library), AI edit with your own Anthropic key (⌘J, reviewed as a diff), live data from CSV/JSON/Google Sheets links, export to PDF and single-file HTML, templates | Done |
+| 6. Power features | MCP server + `quire` CLI (Claude creates, finds and updates HTML in your library), live data from CSV/JSON/Google Sheets links, export to PDF and single-file HTML | Done |
 | 7. Launch | Abuse prevention for public pages, security review, self-host Docker image, docs site, billing for the hosted plan | |
 
 ## Decisions

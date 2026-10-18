@@ -24,9 +24,9 @@ pub fn api_base() -> String {
     std::env::var("QUIRE_API_URL")
         .ok()
         .or_else(|| option_env!("QUIRE_API_URL").map(str::to_string))
-        .unwrap_or_else(|| {
-            if cfg!(debug_assertions) { "http://localhost:8787" } else { PRODUCTION_API }.to_string()
-        })
+        // Dev builds use the real cloud too (same account as the installed app);
+        // set QUIRE_API_URL=http://localhost:8787 to work against `pnpm dev:cloud`.
+        .unwrap_or_else(|| PRODUCTION_API.to_string())
         .trim_end_matches('/')
         .to_string()
 }

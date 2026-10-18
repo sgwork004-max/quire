@@ -1,67 +1,105 @@
 @import "tailwindcss";
 
-/* Design tokens. Warm paper neutrals, ink text, one vermilion accent. */
+/* Wordmark and display face only; UI text stays on the system stack. */
+@font-face {
+  font-family: "Quire Display";
+  font-style: normal;
+  font-display: block;
+  font-weight: 200 800;
+  src: url(./assets/fonts/bricolage-grotesque.woff2) format("woff2-variations");
+}
+
+/*
+ * Print-studio identity on cool grey stock. Two inks with fixed meaning:
+ * federal blue is you (selection, your actions, focus), sunflower is other
+ * people (presence, comments, shared, live). Where both apply they overprint
+ * to green. Gone or offline prints in one grey ink.
+ */
 :root {
-  --bg: #fbfaf8;
-  --sidebar: #f4f2ef;
+  --brand-blue: #3d5588;
+  --brand-sun: #ffb511;
+  --brand-paper: #eef0f3;
+  --bg: #f6f7f8;
+  --sidebar: #eceef1;
   --surface: #ffffff;
-  --canvas: #eeece8;
-  --border: rgb(28 25 23 / 0.08);
-  --border-strong: rgb(28 25 23 / 0.15);
-  --text: #1c1917;
-  --text-2: #5c5752;
-  --text-3: #a39d97;
-  --hover: rgb(28 25 23 / 0.045);
-  --active: rgb(28 25 23 / 0.08);
-  --accent: #e2513a;
-  --accent-hover: #cf4430;
-  --accent-soft: rgb(226 81 58 / 0.1);
+  --canvas: #e5e8ec;
+  --border: rgb(20 23 28 / 0.1);
+  --border-strong: rgb(20 23 28 / 0.18);
+  --text: #14171c;
+  --text-2: #4f5560;
+  --text-3: #6b7280;
+  --hover: rgb(20 23 28 / 0.05);
+  --active: rgb(20 23 28 / 0.085);
+  --accent: #3d5588;
+  --accent-hover: #33487a;
+  --accent-soft: rgb(61 85 136 / 0.12);
   --accent-fg: #ffffff;
-  --shadow-page: 0 1px 2px rgb(28 25 23 / 0.06), 0 8px 32px -8px rgb(28 25 23 / 0.18);
-  --syntax-tag: #b8432f;
-  --syntax-attr: #8a5a12;
-  --syntax-string: #2f7a4d;
-  --syntax-comment: #a39d97;
-  --syntax-keyword: #7c3aed;
-  --syntax-number: #1d6fb8;
-  --syntax-prop: #1e7f8f;
-  --syntax-fn: #4f46e5;
-  --syntax-selection: rgb(226 81 58 / 0.16);
-  --syntax-match: rgb(234 179 8 / 0.25);
-  --diff-add: rgb(34 160 90 / 0.1);
-  --diff-del: rgb(226 81 58 / 0.1);
+  --others: #ffb511;
+  --others-fg: #2b2100;
+  --others-ink: #8a5800;
+  --others-soft: rgb(255 181 17 / 0.22);
+  --overprint: #3f7a4f;
+  --danger: #c8372d;
+  --danger-soft: rgb(200 55 45 / 0.1);
+  --success: #1f8a5b;
+  --grey-ink: #9aa0aa;
+  --grain-opacity: 0.45;
+  --shadow-page: 0 1px 2px rgb(20 23 28 / 0.07), 0 10px 30px -10px rgb(20 23 28 / 0.22);
+  --syntax-tag: #3d5588;
+  --syntax-attr: #8a5800;
+  --syntax-string: #1f7a52;
+  --syntax-comment: #8a909b;
+  --syntax-keyword: #7a3f9a;
+  --syntax-number: #b4532a;
+  --syntax-prop: #1f6f80;
+  --syntax-fn: #2f4fb3;
+  --syntax-selection: rgb(61 85 136 / 0.2);
+  --syntax-match: rgb(255 181 17 / 0.3);
+  --diff-add: rgb(31 138 91 / 0.1);
+  --diff-del: rgb(200 55 45 / 0.1);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #171615;
-    --sidebar: #1c1b1a;
-    --surface: #232120;
-    --canvas: #100f0f;
-    --border: rgb(255 255 255 / 0.07);
-    --border-strong: rgb(255 255 255 / 0.13);
-    --text: #eeebe8;
-    --text-2: #aaa49e;
-    --text-3: #6d6762;
-    --hover: rgb(255 255 255 / 0.05);
-    --active: rgb(255 255 255 / 0.09);
-    --accent: #f0664f;
-    --accent-hover: #f47b66;
-    --accent-soft: rgb(240 102 79 / 0.14);
-    --shadow-page: 0 0 0 1px rgb(255 255 255 / 0.06), 0 12px 40px -8px rgb(0 0 0 / 0.6);
-    --syntax-tag: #f0806b;
-    --syntax-attr: #e3b062;
-    --syntax-string: #8fcf9c;
-    --syntax-comment: #6d6762;
-    --syntax-keyword: #c4a5ff;
-    --syntax-number: #7fb8f0;
+    --bg: #15171b;
+    --sidebar: #1a1d22;
+    --surface: #22252b;
+    --canvas: #0e1013;
+    --border: rgb(236 238 241 / 0.08);
+    --border-strong: rgb(236 238 241 / 0.15);
+    --text: #eceef1;
+    --text-2: #a9afb9;
+    --text-3: #868d99;
+    --hover: rgb(236 238 241 / 0.055);
+    --active: rgb(236 238 241 / 0.1);
+    --accent: #7f9ade;
+    --accent-hover: #97aee6;
+    --accent-soft: rgb(127 154 222 / 0.18);
+    --accent-fg: #0b1020;
+    --others: #ffc23d;
+    --others-fg: #2b2100;
+    --others-ink: #ffcf66;
+    --others-soft: rgb(255 194 61 / 0.16);
+    --overprint: #86c495;
+    --danger: #ff6b5b;
+    --danger-soft: rgb(255 107 91 / 0.14);
+    --success: #4cc98a;
+    --grey-ink: #5f6570;
+    --grain-opacity: 0.3;
+    --shadow-page: 0 0 0 1px rgb(236 238 241 / 0.06), 0 12px 40px -8px rgb(0 0 0 / 0.6);
+    --syntax-tag: #97aee6;
+    --syntax-attr: #ffcf66;
+    --syntax-string: #86d6a8;
+    --syntax-comment: #6b717c;
+    --syntax-keyword: #c9a5f0;
+    --syntax-number: #ff9f73;
     --syntax-prop: #6fcfdc;
-    --syntax-fn: #a5b4fc;
-    --syntax-selection: rgb(240 102 79 / 0.24);
-    --syntax-match: rgb(234 179 8 / 0.22);
-    --diff-add: rgb(52 199 120 / 0.12);
-    --diff-del: rgb(240 102 79 / 0.14);
+    --syntax-fn: #a5b8ff;
+    --syntax-selection: rgb(127 154 222 / 0.28);
+    --syntax-match: rgb(255 194 61 / 0.22);
+    --diff-add: rgb(76 201 138 / 0.13);
+    --diff-del: rgb(255 107 91 / 0.15);
     color-scheme: dark;
   }
 }
@@ -82,8 +120,18 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-soft: var(--accent-soft);
   --color-accent-fg: var(--accent-fg);
+  --color-others: var(--others);
+  --color-others-fg: var(--others-fg);
+  --color-others-ink: var(--others-ink);
+  --color-others-soft: var(--others-soft);
+  --color-overprint: var(--overprint);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-success: var(--success);
+  --color-grey-ink: var(--grey-ink);
   --shadow-page: var(--shadow-page);
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+  --font-display: "Quire Display", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
 }
 
@@ -115,6 +163,34 @@ button {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
+}
+
+::selection {
+  background: var(--accent-soft);
+}
+
+/* Uncoated paper: a faint grain on the chrome only, never on documents. */
+.paper {
+  position: relative;
+  isolation: isolate;
+}
+.paper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: var(--grain-opacity);
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .11 0 0 0 0 .1 0 0 0 0 .09 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+  .paper::before { mix-blend-mode: screen; filter: invert(1); }
+}
+
+/* Thin scrollbars inked to the palette. */
+* {
+  scrollbar-color: var(--border-strong) transparent;
 }
 
 /* The code editor and diff text are selectable even though the app chrome is not. */

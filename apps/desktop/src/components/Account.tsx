@@ -2,6 +2,8 @@ import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { ExternalLink, Loader2, LogOut, UserRound, WifiOff, X } from "lucide-react";
 import { useAccount } from "../store/account";
+import { formatBytes } from "../lib/format";
+import { useCloud } from "../store/cloud";
 import type { Account } from "../lib/ipc";
 
 function initials(name: string) {
@@ -35,21 +37,28 @@ export function Avatar({ account, size = 24 }: { account: Account; size?: number
 }
 
 /** Bottom of the sidebar: who you are, or a way to sign in. */
-export function AccountButton() {
+export function AccountButton({ compact = false }: { compact?: boolean }) {
   const { status, account, offline, signIn } = useAccount();
   const [open, setOpen] = useState(false);
 
-  if (status === "loading") return <div className="h-9" />;
+  if (status === "loading")
+    return (
+      <div className={clsx("flex h-9 items-center gap-2 px-2", compact && "justify-center")} aria-label="Loading account">
+        <span className="h-6 w-6 shrink-0 animate-pulse rounded-full bg-active" />
+        {!compact && <span className="h-2.5 w-24 animate-pulse rounded bg-active" />}
+      </div>
+    );
 
   if (!account) {
     return (
       <button
         type="button"
         onClick={() => void signIn()}
-        className="flex h-9 w-full items-center gap-2 rounded-md px-2 text-left text-[13px] text-ink-2 transition-colors hover:bg-hover hover:text-ink"
+        title={compact ? "Sign in to share" : undefined}
+        className={clsx("flex h-9 items-center gap-2 rounded-md px-2 text-left text-[13px] text-ink-2 transition-colors hover:bg-hover hover:text-ink", compact ? "w-9 justify-center" : "w-full")}
       >
         <UserRound size={16} strokeWidth={1.75} className="text-ink-3" />
-        <span className="flex-1">Sign in to share</span>
+        {!compact && <span className="flex-1">Sign in to share</span>}
       </button>
     );
   }
@@ -60,15 +69,21 @@ export function AccountButton() {
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className={clsx("flex h-9 w-full items-center gap-2 rounded-md px-2 text-left transition-colors hover:bg-hover", open && "bg-hover")}
+        title={compact ? (offline ? `${account.name} (offline)` : account.name) : undefined}
+        className={clsx("flex h-9 items-center gap-2 rounded-md text-left transition-colors hover:bg-hover", compact ? "w-9 justify-center" : "w-full px-2", open && "bg-hover")}
       >
         <Avatar account={account} />
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[12.5px] font-medium text-ink">{account.name}</span>
-        </span>
-        {offline && (
-          <span title="Can't reach Quire Cloud. Your files still work; sharing resumes when you're back online." className="shrink-0">
-            <WifiOff size={13} className="text-ink-3" aria-label="Offline" />
+        {!compact && (
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[12.5px] font-medium text-ink">{account.name}</span>
+          </span>
+        )}
+        {offline && !compact && (
+          <span
+            title="Quire can't reach Quire Cloud right now. Your files still work; sharing and comments resume when you're back online."
+            className="flex shrink-0 items-center gap-1 rounded-full bg-hover px-1.5 py-0.5 text-[10.5px] text-ink-3"
+          >
+            <WifiOff size={11} aria-hidden /> Offline
           </span>
         )}
       </button>
@@ -121,6 +136,7 @@ function ProfilePopover({ account, onClose }: { account: Account; onClose: () =>
         />
         <span className="mt-1 block text-[11px] text-ink-3">People you share with see this name.</span>
       </label>
+      <StorageMeter />
       <button
         type="button"
         onClick={() => {
@@ -131,6 +147,27 @@ function ProfilePopover({ account, onClose }: { account: Account; onClose: () =>
       >
         <LogOut size={14} /> Sign out
       </button>
+    </div>
+  );
+}
+
+/** How much of the account's cloud space shared files use. Unshared files never count. */
+export function StorageMeter() {
+  const usage = useCloud((s) => s.overview?.usage);
+  if (!usage) return null;
+  const pct = Math.min(100, (usage.usedBytes / usage.quotaBytes) * 100);
+  return (
+    <div className="mt-3">
+      <div className="mb-1 flex justify-between text-[11px] text-ink-2">
+        <span>Cloud storage</span>
+        <span className="tabular-nums">
+          {formatBytes(usage.usedBytes)} of {formatBytes(usage.quotaBytes)}
+        </span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-active">
+        <div className={clsx("h-full rounded-full", pct > 90 ? "bg-danger" : "bg-accent")} style={{ width: `${Math.max(pct, usage.usedBytes ? 2 : 0)}%` }} />
+      </div>
+      <span className="mt-1 block text-[11px] text-ink-3">Only files you share use space. Everything else stays on this Mac.</span>
     </div>
   );
 }
@@ -151,7 +188,7 @@ export function SignInDialog() {
 
         {error ? (
           <>
-            <p className="mt-2 text-[13px] text-accent">{error}</p>
+            <p className="mt-2 text-[13px] text-danger">{error}</p>
             <button type="button" onClick={() => void signIn()} className="mt-5 h-9 w-full rounded-lg bg-accent text-[13px] font-medium text-accent-fg hover:bg-accent-hover">
               Try again
             </button>

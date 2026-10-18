@@ -92,6 +92,19 @@ const MIGRATIONS: &[&str] = &[
         value  TEXT NOT NULL
     );
     "#,
+    // v5: files hidden from the library views (not trashed; the file stays on disk)
+    r#"
+    ALTER TABLE files ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+    "#,
+    // v6: folders that live in Quire (not on disk): a file is in at most one
+    r#"
+    CREATE TABLE folders (
+        id          INTEGER PRIMARY KEY,
+        name        TEXT NOT NULL UNIQUE COLLATE NOCASE,
+        created_ms  INTEGER NOT NULL
+    );
+    ALTER TABLE files ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL;
+    "#,
 ];
 
 pub fn setting(conn: &Connection, key: &str) -> Option<String> {

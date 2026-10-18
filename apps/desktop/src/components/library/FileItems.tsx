@@ -33,8 +33,8 @@ function SharedBadge({ path }: { path: string }) {
   const shared = useCloud((s) => s.overview?.links.some((l) => l.path === path && l.role === "owner"));
   if (!shared) return null;
   return (
-    <span title="Shared" className="flex shrink-0 items-center text-ink-3">
-      <Users size={12} strokeWidth={2} />
+    <span title="Shared" className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-others text-others-fg">
+      <Users size={10} strokeWidth={2.25} />
     </span>
   );
 }
@@ -79,16 +79,40 @@ function RenameInput({ file }: { file: FileEntry }) {
   );
 }
 
+/** Drag payload for library files (comma-separated ids), dropped on sidebar folders. */
+export const FILE_DRAG = "application/x-quire-files";
+
 function useFileActions(file: FileEntry) {
-  const { openFile, fileMenu } = useLibrary.getState();
+  const { openFile, fileMenu, select, clearSelection } = useLibrary.getState();
+  const selected = useLibrary((s) => s.selected.includes(file.id));
   return {
-    onClick: () => openFile(file),
-    onKeyDown: (e: React.KeyboardEvent) => {
-      if (e.key === "Enter") openFile(file);
-    },
-    onContextMenu: (e: React.MouseEvent) => {
-      e.preventDefault();
-      fileMenu(file);
+    selected,
+    props: {
+      "aria-selected": selected,
+      draggable: !file.trashedMs,
+      onDragStart: (e: React.DragEvent) => {
+        const { selected: ids } = useLibrary.getState();
+        const dragged = ids.includes(file.id) ? ids : [file.id];
+        e.dataTransfer.setData(FILE_DRAG, dragged.join(","));
+        e.dataTransfer.effectAllowed = "copyMove";
+      },
+      onClick: (e: React.MouseEvent) => {
+        if (e.metaKey || e.ctrlKey) return select(file, "toggle");
+        if (e.shiftKey) return select(file, "range");
+        clearSelection();
+        openFile(file);
+      },
+      onKeyDown: (e: React.KeyboardEvent) => {
+        if (e.key === "Enter") openFile(file);
+        if (e.key === " ") {
+          e.preventDefault();
+          select(file, "toggle");
+        }
+      },
+      onContextMenu: (e: React.MouseEvent) => {
+        e.preventDefault();
+        fileMenu(file);
+      },
     },
   };
 }
@@ -105,7 +129,7 @@ function StarButton({ file, className }: { file: FileEntry; className?: string }
       }}
       className={clsx(
         "flex items-center justify-center rounded-md transition",
-        file.starred ? "text-amber-500" : "text-ink-3 opacity-0 group-hover:opacity-100 hover:text-ink",
+        file.starred ? "text-accent" : "text-ink-3 opacity-0 group-hover:opacity-100 hover:text-ink",
         className,
       )}
     >
@@ -116,10 +140,23 @@ function StarButton({ file, className }: { file: FileEntry; className?: string }
 
 export function FileCard({ file, tags }: { file: FileEntry; tags: Tag[] }) {
   const renaming = useLibrary((s) => s.renamingId === file.id);
-  const actions = useFileActions(file);
+  const { selected, props } = useFileActions(file);
   return (
-    <div role="button" tabIndex={0} title={file.path} {...actions} className="group rounded-xl p-1.5 outline-none transition-colors hover:bg-hover focus-visible:bg-hover">
-      <div className="relative overflow-hidden rounded-lg shadow-[0_0_0_1px_var(--border),0_1px_3px_rgb(0_0_0/0.06)] transition-shadow group-hover:shadow-[0_0_0_1px_var(--border-strong),0_6px_20px_-6px_rgb(0_0_0/0.18)]">
+    <div
+      role="button"
+      tabIndex={0}
+      title={file.path}
+      {...props}
+      className={clsx("group rounded-xl p-1.5 outline-none transition-colors focus-visible:bg-hover", selected ? "bg-accent-soft" : "hover:bg-hover")}
+    >
+      <div
+        className={clsx(
+          "relative overflow-hidden rounded-lg transition-shadow",
+          selected
+            ? "shadow-[0_0_0_2px_var(--accent)]"
+            : "shadow-[0_0_0_1px_var(--border),0_1px_3px_rgb(0_0_0/0.06)] group-hover:shadow-[0_0_0_1px_var(--border-strong),0_6px_20px_-6px_rgb(0_0_0/0.18)]",
+        )}
+      >
         <Thumbnail path={file.path} version={file.modifiedMs} disabled={!!file.trashedMs} />
         <StarButton
           file={file}
@@ -165,14 +202,17 @@ export function FileCard({ file, tags }: { file: FileEntry; tags: Tag[] }) {
 
 export function FileRow({ file, tags }: { file: FileEntry; tags: Tag[] }) {
   const renaming = useLibrary((s) => s.renamingId === file.id);
-  const actions = useFileActions(file);
+  const { selected, props } = useFileActions(file);
   return (
     <div
       role="button"
       tabIndex={0}
       title={file.path}
-      {...actions}
-      className="group grid grid-cols-[minmax(0,1fr)_minmax(0,0.6fr)_110px_70px_28px] items-center gap-4 border-b border-line px-3 py-2 outline-none transition-colors last:border-0 hover:bg-hover focus-visible:bg-hover"
+      {...props}
+      className={clsx(
+        "group grid grid-cols-[minmax(0,1fr)_minmax(0,0.6fr)_110px_70px_28px] items-center gap-4 border-b border-line px-3 py-2 outline-none transition-colors last:border-0 focus-visible:bg-hover",
+        selected ? "bg-accent-soft" : "hover:bg-hover",
+      )}
     >
       <div className="flex min-w-0 items-center gap-2.5">
         <FileCode2 size={16} strokeWidth={1.6} className="shrink-0 text-ink-3" />

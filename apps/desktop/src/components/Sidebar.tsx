@@ -1,14 +1,17 @@
 import clsx from "clsx";
 import { useState, type ReactNode } from "react";
-import { Clock, Folder, FolderPlus, Library, PanelLeftClose, Plus, Star, Trash2, Users } from "lucide-react";
+import { Clock, Download, EyeOff, Folder, FolderPlus, HardDrive, Library, PanelLeftClose, PanelLeftOpen, Plus, Settings, Star, Trash2, Users } from "lucide-react";
 import { useCloud } from "../store/cloud";
 import { HOME, useApp } from "../store/app";
-import { useLibrary, type LibraryView } from "../store/library";
-import { popupMenu } from "../lib/menu";
+import { dropOn, useLibrary, type DropTarget, type LibraryView } from "../store/library";
 import type { Tag } from "../lib/ipc";
+import { useSettings } from "../store/settings";
+import { useImport } from "../store/import";
+import { FILE_DRAG } from "./library/FileItems";
 import { IconButton } from "./IconButton";
 import { AccountButton } from "./Account";
 import { NotificationsBell } from "./Notifications";
+import { Logo, Wordmark } from "./Logo";
 
 const same = (a: LibraryView, b: LibraryView) =>
   a.kind === b.kind && ("id" in a ? a.id : null) === ("id" in b ? b.id : null);
@@ -17,97 +20,128 @@ export function Sidebar() {
   const overview = useLibrary((s) => s.overview);
   const view = useLibrary((s) => s.view);
   const onHome = useApp((s) => s.activeId === HOME);
-  const { setView, addFolder, folderMenu, newFile } = useLibrary.getState();
-  const { toggleSidebar, openDialog } = useApp.getState();
+  const open = useApp((s) => s.sidebarOpen);
+  const { setView, addFolder, folderMenu, newFolder, folderContextMenu } = useLibrary.getState();
+  const { toggleSidebar } = useApp.getState();
   const [creatingTag, setCreatingTag] = useState(false);
   const sharedCount = useCloud((s) => s.overview?.documents.filter((d) => d.role !== "owner").length);
+  const compact = !open;
 
   const isActive = (v: LibraryView) => onHome && same(view, v);
-
-  const showNewMenu = () =>
-    void popupMenu([
-      { text: "New HTML File", action: () => void newFile() },
-      {
-        text: "New from Template",
-        items: [
-          { text: "Dashboard", action: () => void newFile("dashboard") },
-          { text: "Report", action: () => void newFile("report") },
-          { text: "Landing page", action: () => void newFile("landing") },
-          { text: "One-pager", action: () => void newFile("one-pager") },
-        ],
-      },
-      { text: "Open File…", action: () => void openDialog() },
-      null,
-      { text: "Add Folder to Library…", action: () => void addFolder() },
-    ]);
+  const nav = (props: Omit<Parameters<typeof NavItem>[0], "compact">) => <NavItem compact={compact} {...props} />;
 
   return (
-    <aside className="flex w-60 shrink-0 flex-col border-r border-line bg-sidebar">
-      <div data-tauri-drag-region className="flex h-[52px] shrink-0 items-center justify-end px-2.5">
-        <IconButton label="Hide sidebar" shortcut="⌘\" onClick={toggleSidebar}>
-          <PanelLeftClose size={16} strokeWidth={1.75} />
-        </IconButton>
+    // z-30 keeps the account and notification popovers above the open document.
+    <aside className={clsx("paper relative z-30 flex shrink-0 flex-col border-r border-line bg-sidebar", compact ? "w-[78px]" : "w-60")}>
+      {/* The window's traffic lights sit in this strip. */}
+      <div data-tauri-drag-region className="flex h-[44px] shrink-0 items-start justify-end px-2.5 pt-[17px]">
+        {!compact && (
+          <IconButton label="Collapse sidebar" shortcut="⌘\" onClick={toggleSidebar}>
+            <PanelLeftClose size={16} strokeWidth={1.75} />
+          </IconButton>
+        )}
+      </div>
+      <div data-tauri-drag-region className={clsx("shrink-0", compact ? "flex flex-col items-center gap-2 pb-2" : "px-4 pb-3 pt-1")}>
+        {compact ? (
+          <>
+            <span title="Quire">
+              <Logo size={30} />
+            </span>
+            <IconButton label="Expand sidebar" shortcut="⌘\" onClick={toggleSidebar}>
+              <PanelLeftOpen size={16} strokeWidth={1.75} />
+            </IconButton>
+          </>
+        ) : (
+          <span className="pointer-events-none">
+            <Wordmark size={24} />
+          </span>
+        )}
       </div>
 
-      <div className="px-2.5 pb-2">
+      <div className={clsx("pb-2", compact ? "flex justify-center px-2" : "px-2.5")}>
         <button
           type="button"
-          onClick={showNewMenu}
-          className="flex h-8 w-full items-center gap-2 rounded-lg border border-line-strong bg-surface px-2.5 text-[13px] font-medium text-ink shadow-[0_1px_1px_rgb(0_0_0/0.04)] transition-colors hover:bg-hover"
+          title={compact ? "Import HTML  ⇧⌘I" : undefined}
+          aria-label="Import HTML"
+          onClick={() => useImport.getState().show()}
+          className={clsx(
+            "flex h-8 items-center gap-2 rounded-lg border border-line-strong bg-surface text-[13px] font-medium text-ink shadow-[0_1px_1px_rgb(0_0_0/0.04)] transition-colors hover:bg-hover",
+            compact ? "w-10 justify-center" : "w-full px-2.5",
+          )}
         >
-          <Plus size={15} strokeWidth={2} className="text-accent" />
-          New
-          <kbd className="ml-auto font-sans text-[11px] text-ink-3">⌘N</kbd>
+          <Download size={15} strokeWidth={2} className="text-accent" />
+          {!compact && (
+            <>
+              Import
+              <kbd className="ml-auto font-sans text-[11px] text-ink-3">⇧⌘I</kbd>
+            </>
+          )}
         </button>
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-3 [scrollbar-width:thin]">
-        <NavItem icon={<Library size={15} strokeWidth={1.75} />} label="All files" count={overview?.all} active={isActive({ kind: "all" })} onClick={() => setView({ kind: "all" })} />
-        <NavItem icon={<Clock size={15} strokeWidth={1.75} />} label="Recent" active={isActive({ kind: "recent" })} onClick={() => setView({ kind: "recent" })} />
-        <NavItem icon={<Users size={15} strokeWidth={1.75} />} label="Shared with me" count={sharedCount || undefined} active={isActive({ kind: "shared" })} onClick={() => setView({ kind: "shared" })} />
-        <NavItem icon={<Star size={15} strokeWidth={1.75} />} label="Starred" count={overview?.starred || undefined} active={isActive({ kind: "starred" })} onClick={() => setView({ kind: "starred" })} />
+        {nav({ icon: <Library size={15} strokeWidth={1.75} />, label: "All files", count: overview?.all, active: isActive({ kind: "all" }), onClick: () => setView({ kind: "all" }) })}
+        {nav({ icon: <Clock size={15} strokeWidth={1.75} />, label: "Recent", active: isActive({ kind: "recent" }), onClick: () => setView({ kind: "recent" }) })}
+        {nav({ icon: <Users size={15} strokeWidth={1.75} />, label: "Shared with me", count: sharedCount || undefined, active: isActive({ kind: "shared" }), onClick: () => setView({ kind: "shared" }) })}
+        {nav({ icon: <Star size={15} strokeWidth={1.75} />, label: "Starred", count: overview?.starred || undefined, active: isActive({ kind: "starred" }), onClick: () => setView({ kind: "starred" }) })}
 
-        <Section title="Folders" action={{ label: "Add folder", onClick: () => void addFolder(), icon: <FolderPlus size={13} strokeWidth={2} /> }}>
-          {overview?.locations.length ? (
-            overview.locations.map((l) => (
-              <NavItem
-                key={l.id}
-                icon={<Folder size={15} strokeWidth={1.75} />}
-                label={l.name}
-                title={l.path}
-                count={l.count}
-                active={isActive({ kind: "location", id: l.id })}
-                onClick={() => setView({ kind: "location", id: l.id })}
-                onContextMenu={() => folderMenu(l)}
-              />
-            ))
-          ) : (
-            <button
-              type="button"
-              onClick={() => void addFolder()}
-              className="w-full rounded-md px-2 py-1.5 text-left text-[12px] leading-relaxed text-ink-3 hover:bg-hover hover:text-ink-2"
-            >
-              Add a folder and Quire keeps every HTML file in it organised.
-            </button>
-          )}
+        <Section compact={compact} title="Folders" action={{ label: "New folder", onClick: () => void newFolder(), icon: <FolderPlus size={13} strokeWidth={2} /> }}>
+          {overview?.folders.map((f) => (
+            <NavItem
+              key={f.id}
+              compact={compact}
+              icon={<Folder size={15} strokeWidth={1.75} />}
+              label={f.name}
+              count={f.count || undefined}
+              active={isActive({ kind: "folder", id: f.id })}
+              onClick={() => setView({ kind: "folder", id: f.id })}
+              onContextMenu={() => folderContextMenu(f)}
+              dropTarget={{ kind: "folder", id: f.id }}
+            />
+          ))}
+          {compact
+            ? nav({ icon: <FolderPlus size={15} strokeWidth={1.75} />, label: "New folder", active: false, onClick: () => void newFolder() })
+            : !overview?.folders.length && (
+                <button type="button" onClick={() => void newFolder()} className="w-full rounded-md px-2 py-1.5 text-left text-[12px] leading-relaxed text-ink-3 hover:bg-hover hover:text-ink-2">
+                  New folder. Drag files into it to keep projects together.
+                </button>
+              )}
         </Section>
 
-        <Section title="Tags" action={{ label: "New tag", onClick: () => setCreatingTag(true), icon: <Plus size={13} strokeWidth={2.25} /> }}>
-          {overview?.tags.map((t) => <TagItem key={t.id} tag={t} active={isActive({ kind: "tag", id: t.id })} />)}
-          {creatingTag && <TagInput onDone={() => setCreatingTag(false)} />}
-          {!creatingTag && !overview?.tags.length && (
-            <p className="px-2 py-1 text-[12px] text-ink-3">Group files across folders.</p>
-          )}
+        <Section compact={compact} title="Tags" action={{ label: "New tag", onClick: () => setCreatingTag(true), icon: <Plus size={13} strokeWidth={2.25} /> }}>
+          {overview?.tags.map((t) => <TagItem key={t.id} tag={t} compact={compact} active={isActive({ kind: "tag", id: t.id })} />)}
+          {creatingTag && !compact && <TagInput onDone={() => setCreatingTag(false)} />}
+          {!creatingTag && !compact && !overview?.tags.length && <p className="px-2 py-1 text-[12px] text-ink-3">Group files across folders.</p>}
+        </Section>
+
+        <Section compact={compact} title="On this Mac" action={{ label: "Watch a folder on this Mac", onClick: () => void addFolder(), icon: <Plus size={13} strokeWidth={2.25} /> }}>
+          {overview?.locations.map((l) => (
+            <NavItem
+              key={l.id}
+              compact={compact}
+              icon={<HardDrive size={15} strokeWidth={1.75} />}
+              label={l.name}
+              title={l.path}
+              count={l.count}
+              active={isActive({ kind: "location", id: l.id })}
+              onClick={() => setView({ kind: "location", id: l.id })}
+              onContextMenu={() => folderMenu(l)}
+            />
+          ))}
         </Section>
       </nav>
 
       <div className="border-t border-line px-2 py-2">
-        <NavItem icon={<Trash2 size={15} strokeWidth={1.75} />} label="Trash" count={overview?.trash || undefined} active={isActive({ kind: "trash" })} onClick={() => setView({ kind: "trash" })} />
-        <div className="mt-1 flex items-center gap-1 border-t border-line pt-1">
-          <div className="min-w-0 flex-1">
-            <AccountButton />
+        {nav({ icon: <EyeOff size={15} strokeWidth={1.75} />, label: "Hidden", count: overview?.hidden || undefined, active: isActive({ kind: "hidden" }), onClick: () => setView({ kind: "hidden" }) })}
+        {nav({ icon: <Trash2 size={15} strokeWidth={1.75} />, label: "Trash", count: overview?.trash || undefined, active: isActive({ kind: "trash" }), onClick: () => setView({ kind: "trash" }) })}
+        <div className={clsx("mt-1 flex items-center gap-0.5 border-t border-line pt-1", compact && "flex-col")}>
+          <div className={clsx("min-w-0", !compact && "flex-1")}>
+            <AccountButton compact={compact} />
           </div>
           <NotificationsBell />
+          <IconButton label="Settings" shortcut="⌘," onClick={() => useSettings.getState().show()} className="h-9 w-9">
+            <Settings size={16} strokeWidth={1.75} />
+          </IconButton>
         </div>
       </div>
     </aside>
@@ -117,12 +151,15 @@ export function Sidebar() {
 function Section({
   title,
   action,
+  compact,
   children,
 }: {
   title: string;
   action: { label: string; onClick: () => void; icon: ReactNode };
+  compact: boolean;
   children: ReactNode;
 }) {
+  if (compact) return <section className="mt-2 space-y-px border-t border-line pt-2">{children}</section>;
   return (
     <section className="mt-4">
       <div className="group flex h-6 items-center px-2 text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">
@@ -132,7 +169,7 @@ function Section({
           aria-label={action.label}
           title={action.label}
           onClick={action.onClick}
-          className="ml-auto flex h-5 w-5 items-center justify-center rounded text-ink-3 opacity-0 transition-opacity hover:bg-active hover:text-ink group-hover:opacity-100 focus-visible:opacity-100"
+          className="ml-auto flex h-5 w-5 items-center justify-center rounded text-ink-3 opacity-60 transition-opacity hover:bg-active hover:text-ink hover:opacity-100 group-hover:opacity-100"
         >
           {action.icon}
         </button>
@@ -148,22 +185,73 @@ function NavItem({
   count,
   active,
   title,
+  compact,
+  dropTarget,
   onClick,
   onContextMenu,
 }: {
   icon: ReactNode;
-  label: ReactNode;
+  label: string;
   count?: number;
   active: boolean;
   title?: string;
+  compact?: boolean;
+  /** Folder or tag that accepts files dragged from the library or Finder. */
+  dropTarget?: DropTarget;
   onClick: () => void;
   onContextMenu?: () => void;
 }) {
+  const [over, setOver] = useState(false);
+  const drop = dropTarget
+    ? {
+        "data-drop": `${dropTarget.kind}:${dropTarget.id}`,
+        "data-label": label,
+        onDragOver: (e: React.DragEvent) => {
+          if (!e.dataTransfer.types.includes(FILE_DRAG)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          setOver(true);
+        },
+        onDragLeave: () => setOver(false),
+        onDrop: (e: React.DragEvent) => {
+          setOver(false);
+          const ids = (e.dataTransfer.getData(FILE_DRAG) || "").split(",").map(Number).filter(Boolean);
+          if (ids.length) {
+            e.preventDefault();
+            void dropOn(dropTarget, ids);
+          }
+        },
+      }
+    : {};
+  if (compact) {
+    return (
+      <button
+        type="button"
+        title={count !== undefined ? `${label} (${count})` : label}
+        aria-label={label}
+        onClick={onClick}
+        onContextMenu={(e) => {
+          if (!onContextMenu) return;
+          e.preventDefault();
+          onContextMenu();
+        }}
+        {...drop}
+        className={clsx(
+          "relative mx-auto flex h-8 w-9 items-center justify-center rounded-md transition-colors",
+          active ? "bg-accent-soft text-accent" : "text-ink-3 hover:bg-hover hover:text-ink",
+          over && "ring-2 ring-accent", "data-[drop-hover]:ring-2 data-[drop-hover]:ring-accent",
+        )}
+      >
+        {icon}
+      </button>
+    );
+  }
   return (
     <button
       type="button"
       title={title}
       onClick={onClick}
+      {...drop}
       onContextMenu={(e) => {
         if (!onContextMenu) return;
         e.preventDefault();
@@ -171,7 +259,8 @@ function NavItem({
       }}
       className={clsx(
         "flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-[13px] transition-colors",
-        active ? "bg-active font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink",
+        active ? "bg-accent-soft font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink",
+        over && "ring-2 ring-accent", "data-[drop-hover]:ring-2 data-[drop-hover]:ring-accent",
       )}
     >
       <span className={clsx("shrink-0", active ? "text-accent" : "text-ink-3")}>{icon}</span>
@@ -185,7 +274,7 @@ function TagDot({ color }: { color: string }) {
   return <span className="block h-2.5 w-2.5 rounded-full" style={{ background: color }} />;
 }
 
-function TagItem({ tag, active }: { tag: Tag; active: boolean }) {
+function TagItem({ tag, active, compact }: { tag: Tag; active: boolean; compact: boolean }) {
   const [renaming, setRenaming] = useState(false);
   const { setView, tagMenu, updateTag } = useLibrary.getState();
   if (renaming) {
@@ -200,6 +289,8 @@ function TagItem({ tag, active }: { tag: Tag; active: boolean }) {
   }
   return (
     <NavItem
+      compact={compact}
+      dropTarget={{ kind: "tag", id: tag.id }}
       icon={<span className="flex h-[15px] w-[15px] items-center justify-center"><TagDot color={tag.color} /></span>}
       label={tag.name}
       count={tag.count}

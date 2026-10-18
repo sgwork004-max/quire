@@ -27,7 +27,8 @@ use crate::auth::{api_base, AuthState};
 use crate::commands::write_file;
 use crate::db::{err, Db};
 
-const SYNC_INTERVAL: Duration = Duration::from_secs(8);
+const SYNC_INTERVAL: Duration = Duration::from_secs(60);
+const SYNC_INTERVAL_IDLE: Duration = Duration::from_secs(300);
 
 type R<T> = Result<T, String>;
 
@@ -65,6 +66,9 @@ pub struct Usage {
 struct DocumentList {
     documents: Vec<CloudDocument>,
     usage: Usage,
+    /// Unread notifications (servers before 0.3 don't send it).
+    #[serde(default)]
+    unread: Option<i64>,
 }
 
 #[derive(Serialize, Clone, Debug)]
@@ -429,8 +433,12 @@ pub async fn sync_all(app: &AppHandle) -> R<()> {
         }
     }
     // Unread mentions and replies, for the notification bell.
-    if let Ok(n) = call(&auth, reqwest::Method::GET, "/api/notifications", None).await {
-        let _ = app.emit("notifications", n["unread"].as_i64().unwrap_or(0));
+    let unread = match list.unread {
+        Some(n) => Some(n),
+        None => call(&auth, reqwest::Method::GET, "/api/notifications", None).await.ok().and_then(|n| n["unread"].as_i64()),
+    };
+    if let Some(n) = unread {
+        let _ = app.emit("notifications", n);
     }
     Ok(())
 }
@@ -445,7 +453,12 @@ pub fn start(app: &AppHandle) {
                     eprintln!("sync: {e}");
                 }
             }
-            tokio::time::sleep(SYNC_INTERVAL).await;
+            // Every request counts against Quire Cloud's free tier, so poll
+            // gently: once a minute while Quire is in use, every five minutes
+            // in the background. The UI also asks for a sync when the window
+            // comes to the front, and open shared files are live anyway.
+            let focused = app.get_webview_window("main").and_then(|w| w.is_focused().ok()).unwrap_or(false);
+            tokio::time::sleep(if focused { SYNC_INTERVAL } else { SYNC_INTERVAL_IDLE }).await;
         }
     });
 }

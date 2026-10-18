@@ -21,7 +21,7 @@ export function DiffLines({ rows }: { rows: DiffRow[] }) {
           >
             <span className="select-none pr-2 text-right text-ink-3">{r.oldNo ?? ""}</span>
             <span className="select-none pr-2 text-right text-ink-3">{r.newNo ?? ""}</span>
-            <span className={clsx("select-none", r.kind === "add" ? "text-emerald-600" : r.kind === "del" ? "text-accent" : "text-ink-3")}>
+            <span className={clsx("select-none", r.kind === "add" ? "text-success" : r.kind === "del" ? "text-danger" : "text-ink-3")}>
               {r.kind === "add" ? "+" : r.kind === "del" ? "−" : ""}
             </span>
             <span className="whitespace-pre-wrap break-all pr-4 text-ink [user-select:text]">{r.text || " "}</span>

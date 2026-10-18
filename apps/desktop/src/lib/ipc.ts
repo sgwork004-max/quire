@@ -24,8 +24,16 @@ export interface FileEntry {
   starred: boolean;
   trashedMs: number | null;
   tagIds: number[];
+  folderId: number | null;
   /** Search excerpt; matches are wrapped in \u0001 ... \u0002. */
   snippet: string | null;
+}
+
+export interface ImportCandidate {
+  path: string;
+  name: string;
+  sizeBytes: number;
+  modifiedMs: number;
 }
 
 export interface Location {
@@ -42,21 +50,31 @@ export interface Tag {
   count: number;
 }
 
+/** A folder inside Quire; files stay wherever they are on disk. */
+export interface Folder {
+  id: number;
+  name: string;
+  count: number;
+}
+
 export interface Overview {
   locations: Location[];
+  folders: Folder[];
   tags: Tag[];
   all: number;
   starred: number;
   recent: number;
   trash: number;
+  hidden: number;
 }
 
-export type LibraryViewKind = "all" | "recent" | "starred" | "trash" | "location" | "tag";
+export type LibraryViewKind = "all" | "recent" | "starred" | "trash" | "hidden" | "location" | "folder" | "tag";
 
 export interface LibraryQuery {
   view: LibraryViewKind;
   locationId?: number;
   tagId?: number;
+  folderId?: number;
   search?: string;
   sort?: SortKey;
 }
@@ -210,16 +228,14 @@ export const ipc = {
     invoke<DataSource>("add_data_source", { path, url, name, intervalMin }),
   refreshDataSource: (id: number) => invoke<DataSource>("refresh_data_source", { id }),
   removeDataSource: (id: number) => invoke<void>("remove_data_source", { id }),
-  inboxStatus: () => invoke<{ enabled: boolean; downloads: string; inbox: string; pastCount: number }>("inbox_status"),
+  inboxStatus: () =>
+    invoke<{ enabled: boolean; downloads: string; desktop: string; documents: string; inbox: string; pastCount: number }>("inbox_status"),
+  importScan: (folders: string[], files: string[]) => invoke<ImportCandidate[]>("import_scan", { folders, files }),
+  importPaths: (paths: string[], dest: string | null) =>
+    invoke<{ added: number; updated: number; unchanged: number; ids: number[] }>("import_paths", { paths, dest }),
   setInboxEnabled: (enabled: boolean) => invoke<void>("set_inbox_enabled", { enabled }),
-  importPastDownloads: () => invoke<number>("import_past_downloads"),
   printDocument: (id: string) => invoke<void>("print_document", { id }),
   exportStandalone: (id: string, dest: string) => invoke<string>("export_standalone", { id, dest }),
-  aiKeyStatus: () => invoke<boolean>("ai_key_status"),
-  aiSetKey: (key: string) => invoke<void>("ai_set_key", { key }),
-  aiRemoveKey: () => invoke<void>("ai_remove_key"),
-  aiEdit: (html: string, instruction: string, focus: { tag: string; snippet: string; source: string } | null) =>
-    invoke<{ summary: string; edits: { find: string; replace: string }[] }>("ai_edit", { html, instruction, focus }),
   cloudApi: <T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: unknown) =>
     invoke<T>("cloud_api", { method, path, body }),
   // documents
@@ -248,8 +264,12 @@ export const ipc = {
   duplicateFile: (id: number) => invoke<FileEntry>("duplicate_file", { id }),
   trashFile: (id: number) => invoke<void>("trash_file", { id }),
   restoreFile: (id: number) => invoke<FileEntry>("restore_file", { id }),
+  setHidden: (ids: number[], hidden: boolean) => invoke<void>("set_hidden", { ids, hidden }),
+  createFolder: (name: string) => invoke<number>("create_folder", { name }),
+  renameFolder: (id: number, name: string) => invoke<void>("rename_folder", { id, name }),
+  deleteFolder: (id: number) => invoke<void>("delete_folder", { id }),
+  setFilesFolder: (ids: number[], folder: number | null) => invoke<void>("set_files_folder", { ids, folder }),
   emptyTrash: () => invoke<number>("empty_trash"),
-  newFile: (dir: string, template?: string) => invoke<FileEntry>("new_file", { dir, template }),
   // versions
   listVersions: (path: string) => invoke<VersionMeta[]>("list_versions", { path }),
   versionContent: (id: number) => invoke<string>("version_content", { id }),

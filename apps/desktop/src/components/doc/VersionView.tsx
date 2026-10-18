@@ -64,7 +64,7 @@ export function VersionView({ tab, versionId, onClose }: { tab: Tab; versionId: 
         <span className="text-[13px] font-semibold text-ink">Comparing with current</span>
         {diff && (
           <span className="text-[12px] tabular-nums text-ink-3">
-            <span className="text-emerald-600">+{diff.added}</span> <span className="text-accent">−{diff.removed}</span> lines since this version
+            <span className="text-success">+{diff.added}</span> <span className="text-danger">−{diff.removed}</span> lines since this version
           </span>
         )}
         <div className="ml-auto flex items-center rounded-lg bg-hover p-0.5">
@@ -110,7 +110,7 @@ export function VersionView({ tab, versionId, onClose }: { tab: Tab; versionId: 
         </div>
       )}
       <div className="shrink-0 border-t border-line px-4 py-1.5 text-[11px] text-ink-3">
-        <span className="text-accent">−</span> this version · <span className="text-emerald-600">+</span> current file
+        <span className="text-danger">−</span> this version · <span className="text-success">+</span> current file
       </div>
     </div>
   );

@@ -1,4 +1,3 @@
-mod ai;
 mod assets;
 mod auth;
 mod browser;
@@ -65,6 +64,15 @@ fn cli_paths() -> Vec<String> {
         .filter(|a| !a.starts_with('-'))
         .filter(|a| documents::is_html(std::path::Path::new(a)))
         .collect()
+}
+
+#[cfg(target_os = "macos")]
+fn show_main(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -147,8 +155,12 @@ pub fn run() {
             commands::duplicate_file,
             commands::trash_file,
             commands::restore_file,
+            commands::set_hidden,
+            commands::create_folder,
+            commands::rename_folder,
+            commands::delete_folder,
+            commands::set_files_folder,
             commands::empty_trash,
-            commands::new_file,
             commands::list_versions,
             commands::version_content,
             commands::preview_version,
@@ -172,10 +184,6 @@ pub fn run() {
             cloud::set_live,
             cloud::sync_now,
             cloud::cloud_api,
-            ai::ai_key_status,
-            ai::ai_set_key,
-            ai::ai_remove_key,
-            ai::ai_edit,
             datasources::list_data_sources,
             datasources::add_data_source,
             datasources::refresh_data_source,
@@ -184,21 +192,28 @@ pub fn run() {
             export::export_standalone,
             inbox::inbox_status,
             inbox::set_inbox_enabled,
-            inbox::import_past_downloads,
+            inbox::import_scan,
+            inbox::import_paths,
             ui_log,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Quire");
 
     app.run(|_app, _event| {
-        #[cfg(any(target_os = "macos", target_os = "ios"))]
-        if let tauri::RunEvent::Opened { urls } = _event {
-            let paths = urls
-                .iter()
-                .filter_map(|u| u.to_file_path().ok())
-                .map(|p| p.to_string_lossy().into_owned())
-                .collect();
-            _app.state::<PendingOpens>().push(_app, paths);
+        #[cfg(target_os = "macos")]
+        match _event {
+            tauri::RunEvent::Opened { urls } => {
+                let paths = urls
+                    .iter()
+                    .filter_map(|u| u.to_file_path().ok())
+                    .map(|p| p.to_string_lossy().into_owned())
+                    .collect();
+                _app.state::<PendingOpens>().push(_app, paths);
+                show_main(_app);
+            }
+            // Dock icon clicked while the window is closed: bring it back, like any Mac app.
+            tauri::RunEvent::Reopen { has_visible_windows: false, .. } => show_main(_app),
+            _ => {}
         }
     });
 }

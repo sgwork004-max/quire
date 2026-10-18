@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { create } from "zustand";
-import { Database, Loader2, RefreshCw, Sparkles, Trash2, X } from "lucide-react";
+import { Database, Loader2, RefreshCw, Trash2, X } from "lucide-react";
 import { errorMessage, ipc, type DataSource } from "../lib/ipc";
 import { relativeTime } from "../lib/format";
-import { useAi } from "../store/ai";
 import type { Tab } from "../store/app";
 
 export const useDataDialog = create<{ tab: Tab | null; show: (tab: Tab) => void; close: () => void }>((set) => ({
@@ -81,14 +80,6 @@ export function DataDialog() {
     setBusy(null);
   };
 
-  const wireUp = (src: DataSource) => {
-    close();
-    useAi.setState({
-      prefill: `Load data/${src.name} with fetch() and use it to drive the numbers, tables and charts on this page instead of hard-coded values.`,
-    });
-    void useAi.getState().show();
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-6 backdrop-blur-[2px]" onMouseDown={(e) => e.target === e.currentTarget && close()}>
       <div role="dialog" aria-modal="true" aria-labelledby="data-title" className="flex max-h-[80vh] w-full max-w-[560px] flex-col rounded-2xl border border-line bg-surface shadow-[0_24px_64px_-12px_rgb(0_0_0/0.35)]">
@@ -132,7 +123,7 @@ export function DataDialog() {
               {busy === "add" && <Loader2 size={13} className="animate-spin" />} Connect
             </button>
           </div>
-          {error && <p className="text-[12px] text-accent">{error}</p>}
+          {error && <p className="text-[12px] text-danger">{error}</p>}
         </form>
 
         <ul className="min-h-0 flex-1 divide-y divide-line overflow-y-auto px-6 py-3">
@@ -143,7 +134,7 @@ export function DataDialog() {
                 <div className="font-mono text-[12.5px] text-ink">data/{s.name}</div>
                 <div className="truncate text-[11.5px] text-ink-3" title={s.url}>
                   {s.lastError ? (
-                    <span className="text-accent">{s.lastError}</span>
+                    <span className="text-danger">{s.lastError}</span>
                   ) : (
                     <>
                       {INTERVALS.find((i) => i.min === s.intervalMin)?.label ?? `Every ${s.intervalMin} min`} · updated {s.lastFetchedMs ? relativeTime(s.lastFetchedMs) : "never"}
@@ -151,9 +142,6 @@ export function DataDialog() {
                   )}
                 </div>
               </div>
-              <button type="button" title="Use it on the page with AI" onClick={() => wireUp(s)} className="flex h-7 items-center gap-1 rounded-md px-2 text-[12px] text-ink-2 hover:bg-hover hover:text-ink">
-                <Sparkles size={13} /> Wire up
-              </button>
               <button type="button" aria-label="Refresh now" onClick={() => void refresh(s.id)} className="flex h-7 w-7 items-center justify-center rounded-md text-ink-3 hover:bg-hover hover:text-ink">
                 <RefreshCw size={13} className={busy === s.id ? "animate-spin" : ""} />
               </button>
@@ -162,7 +150,7 @@ export function DataDialog() {
                 aria-label="Disconnect"
                 title="Stop refreshing (the last download stays)"
                 onClick={() => void ipc.removeDataSource(s.id).then(load)}
-                className="flex h-7 w-7 items-center justify-center rounded-md text-ink-3 hover:bg-hover hover:text-accent"
+                className="flex h-7 w-7 items-center justify-center rounded-md text-ink-3 hover:bg-danger-soft hover:text-danger"
               >
                 <Trash2 size={13} />
               </button>

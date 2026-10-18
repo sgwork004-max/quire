@@ -72,6 +72,11 @@ interface AppState {
   closeTab: (id: string) => Promise<void>;
   activate: (id: string) => void;
   cycleTab: (step: 1 | -1) => void;
+  /** Chrome-style ⌘1…⌘8 (by position, Library first) and ⌘9 (last tab). */
+  activateIndex: (n: number) => void;
+  /** Paths of recently closed tabs, newest last, for ⇧⌘T. */
+  closed: string[];
+  reopenClosed: () => void;
   setMode: (id: string, mode: Mode) => Promise<void>;
   reload: (id?: string) => void;
   reveal: () => void;
@@ -89,6 +94,7 @@ let toastSeq = 0;
 export const useApp = create<AppState>((set, get) => ({
   tabs: [],
   activeId: HOME,
+  closed: [],
   reloadKeys: {},
   status: {},
   selection: {},
@@ -137,6 +143,7 @@ export const useApp = create<AppState>((set, get) => ({
     if (index === -1) return;
     const next = tabs.filter((t) => t.id !== id);
     const neighbour = next[Math.min(index, next.length - 1)];
+    const closed = [...get().closed.filter((p) => p !== tabs[index].path), tabs[index].path].slice(-20);
     set((s) => {
       const { [id]: _s, ...status } = s.status;
       const { [id]: _e, ...selection } = s.selection;
@@ -145,6 +152,7 @@ export const useApp = create<AppState>((set, get) => ({
         status,
         selection,
         activeId: activeId === id ? (neighbour?.id ?? HOME) : activeId,
+        closed,
       };
     });
     void ipc.closeDocument(id);
@@ -156,6 +164,19 @@ export const useApp = create<AppState>((set, get) => ({
     const ids = [HOME, ...get().tabs.map((t) => t.id)];
     const i = ids.indexOf(get().activeId);
     set({ activeId: ids[(i + step + ids.length) % ids.length] });
+  },
+
+  activateIndex: (n) => {
+    const ids = [HOME, ...get().tabs.map((t) => t.id)];
+    const id = n >= 9 ? ids[ids.length - 1] : ids[n - 1];
+    if (id) set({ activeId: id });
+  },
+
+  reopenClosed: () => {
+    const closed = [...get().closed];
+    const path = closed.pop();
+    set({ closed });
+    if (path) void get().openPaths([path]);
   },
 
   setMode: async (id, mode) => {

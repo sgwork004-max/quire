@@ -31,6 +31,8 @@ pub struct FileEntry {
     pub starred: bool,
     pub trashed_ms: Option<i64>,
     pub tag_ids: Vec<i64>,
+    /// Folder inside Quire, if any.
+    pub folder_id: Option<i64>,
     /// Search excerpt; matches are wrapped in \u{1} ... \u{2}.
     pub snippet: Option<String>,
 }
@@ -57,11 +59,22 @@ pub struct Tag {
 #[serde(rename_all = "camelCase")]
 pub struct Overview {
     pub locations: Vec<Location>,
+    pub folders: Vec<Folder>,
     pub tags: Vec<Tag>,
     pub all: i64,
     pub starred: i64,
     pub recent: i64,
     pub trash: i64,
+    pub hidden: i64,
+}
+
+/// A folder inside Quire. Files keep living wherever they are on disk.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Folder {
+    pub id: i64,
+    pub name: String,
+    pub count: i64,
 }
 
 #[derive(Deserialize, Debug)]
@@ -71,6 +84,8 @@ pub struct Query {
     pub view: String,
     pub location_id: Option<i64>,
     pub tag_id: Option<i64>,
+    #[serde(default)]
+    pub folder_id: Option<i64>,
     pub search: Option<String>,
     /// modified | name | opened
     pub sort: Option<String>,
@@ -78,7 +93,7 @@ pub struct Query {
 
 const FILE_COLUMNS: &str = "f.id, f.path, f.name, f.dir, f.location_id, f.title, f.size_bytes, f.modified_ms, \
      f.opened_ms, f.starred, f.trashed_ms, \
-     (SELECT group_concat(tag_id) FROM file_tags WHERE file_id = f.id)";
+     (SELECT group_concat(tag_id) FROM file_tags WHERE file_id = f.id), f.folder_id";
 
 fn file_from_row(row: &Row, snippet: bool) -> rusqlite::Result<FileEntry> {
     let tags: Option<String> = row.get(11)?;
@@ -97,7 +112,8 @@ fn file_from_row(row: &Row, snippet: bool) -> rusqlite::Result<FileEntry> {
         tag_ids: tags
             .map(|t| t.split(',').filter_map(|s| s.parse().ok()).collect())
             .unwrap_or_default(),
-        snippet: if snippet { row.get(12)? } else { None },
+        folder_id: row.get(12)?,
+        snippet: if snippet { row.get(13)? } else { None },
     })
 }
 
@@ -304,7 +320,7 @@ pub fn overview(conn: &Connection) -> Result<Overview, String> {
         let mut stmt = conn
             .prepare(
                 "SELECT l.id, l.path, l.name,
-                   (SELECT count(*) FROM files f WHERE f.location_id = l.id AND f.trashed_ms IS NULL)
+                   (SELECT count(*) FROM files f WHERE f.location_id = l.id AND f.trashed_ms IS NULL AND f.hidden = 0)
                  FROM locations l ORDER BY l.name COLLATE NOCASE",
             )
             .map_err(err)?;
@@ -320,7 +336,7 @@ pub fn overview(conn: &Connection) -> Result<Overview, String> {
             .prepare(
                 "SELECT t.id, t.name, t.color,
                    (SELECT count(*) FROM file_tags ft JOIN files f ON f.id = ft.file_id
-                    WHERE ft.tag_id = t.id AND f.trashed_ms IS NULL)
+                    WHERE ft.tag_id = t.id AND f.trashed_ms IS NULL AND f.hidden = 0)
                  FROM tags t ORDER BY t.name COLLATE NOCASE",
             )
             .map_err(err)?;
@@ -331,13 +347,28 @@ pub fn overview(conn: &Connection) -> Result<Overview, String> {
             .map_err(err)?;
         rows.filter_map(Result::ok).collect()
     };
+    let folders = {
+        let mut stmt = conn
+            .prepare(
+                "SELECT fo.id, fo.name,
+                   (SELECT count(*) FROM files f WHERE f.folder_id = fo.id AND f.trashed_ms IS NULL AND f.hidden = 0)
+                 FROM folders fo ORDER BY fo.name COLLATE NOCASE",
+            )
+            .map_err(err)?;
+        let rows = stmt
+            .query_map([], |r| Ok(Folder { id: r.get(0)?, name: r.get(1)?, count: r.get(2)? }))
+            .map_err(err)?;
+        rows.filter_map(Result::ok).collect()
+    };
     Ok(Overview {
         locations,
+        folders,
         tags,
-        all: count("SELECT count(*) FROM files WHERE trashed_ms IS NULL")?,
-        starred: count("SELECT count(*) FROM files WHERE trashed_ms IS NULL AND starred = 1")?,
-        recent: count("SELECT count(*) FROM files WHERE trashed_ms IS NULL AND opened_ms IS NOT NULL")?,
+        all: count("SELECT count(*) FROM files WHERE trashed_ms IS NULL AND hidden = 0")?,
+        starred: count("SELECT count(*) FROM files WHERE trashed_ms IS NULL AND hidden = 0 AND starred = 1")?,
+        recent: count("SELECT count(*) FROM files WHERE trashed_ms IS NULL AND hidden = 0 AND opened_ms IS NOT NULL")?,
         trash: count("SELECT count(*) FROM files WHERE trashed_ms IS NOT NULL")?,
+        hidden: count("SELECT count(*) FROM files WHERE trashed_ms IS NULL AND hidden = 1")?,
     })
 }
 
@@ -371,8 +402,9 @@ pub fn query(conn: &Connection, q: &Query) -> Result<Vec<FileEntry>, String> {
 
     match q.view.as_str() {
         "trash" => conds.push("f.trashed_ms IS NOT NULL".into()),
+        "hidden" => conds.push("f.trashed_ms IS NULL AND f.hidden = 1".into()),
         view => {
-            conds.push("f.trashed_ms IS NULL".into());
+            conds.push("f.trashed_ms IS NULL AND f.hidden = 0".into());
             match view {
                 "recent" => {
                     conds.push("f.opened_ms IS NOT NULL".into());
@@ -382,6 +414,10 @@ pub fn query(conn: &Connection, q: &Query) -> Result<Vec<FileEntry>, String> {
                 "location" => {
                     conds.push("f.location_id = ?".into());
                     args.push(Value::Integer(q.location_id.ok_or("missing location")?));
+                }
+                "folder" => {
+                    conds.push("f.folder_id = ?".into());
+                    args.push(Value::Integer(q.folder_id.ok_or("missing folder")?));
                 }
                 "tag" => {
                     conds.push("EXISTS (SELECT 1 FROM file_tags WHERE file_id = f.id AND tag_id = ?)".into());
@@ -526,6 +562,48 @@ pub fn rename(conn: &Connection, id: i64, new_name: &str) -> Result<FileEntry, S
     get(conn, id)
 }
 
+/// Hides a file from every library view (and search) without touching it on disk.
+pub fn set_hidden(conn: &Connection, id: i64, hidden: bool) -> Result<(), String> {
+    conn.execute("UPDATE files SET hidden = ?1 WHERE id = ?2", params![hidden as i64, id])
+        .map(|_| ())
+        .map_err(err)
+}
+
+// ---------------------------------------------------------------------------
+// Folders inside Quire
+
+pub fn create_folder(conn: &Connection, name: &str) -> Result<i64, String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("Folder name can't be empty".into());
+    }
+    conn.query_row("INSERT INTO folders (name, created_ms) VALUES (?1, ?2) RETURNING id", params![name, now_ms()], |r| r.get(0))
+        .map_err(|e| match e {
+            rusqlite::Error::SqliteFailure(f, _) if f.code == rusqlite::ErrorCode::ConstraintViolation => {
+                format!("A folder called “{name}” already exists")
+            }
+            e => e.to_string(),
+        })
+}
+
+pub fn rename_folder(conn: &Connection, id: i64, name: &str) -> Result<(), String> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err("Folder name can't be empty".into());
+    }
+    conn.execute("UPDATE folders SET name = ?1 WHERE id = ?2", params![name, id]).map(|_| ()).map_err(err)
+}
+
+/// Deletes the folder only; its files stay in the library.
+pub fn delete_folder(conn: &Connection, id: i64) -> Result<(), String> {
+    conn.execute("UPDATE files SET folder_id = NULL WHERE folder_id = ?1", [id]).map_err(err)?;
+    conn.execute("DELETE FROM folders WHERE id = ?1", [id]).map(|_| ()).map_err(err)
+}
+
+pub fn set_folder(conn: &Connection, id: i64, folder: Option<i64>) -> Result<(), String> {
+    conn.execute("UPDATE files SET folder_id = ?1 WHERE id = ?2", params![folder, id]).map(|_| ()).map_err(err)
+}
+
 pub fn duplicate(conn: &Connection, id: i64) -> Result<FileEntry, String> {
     let file = get(conn, id)?;
     let from = PathBuf::from(&file.path);
@@ -613,52 +691,6 @@ pub fn purge_expired_trash(db: &Db) -> Result<usize, String> {
     empty_trash(db, Some(now_ms() - TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000))
 }
 
-pub const NEW_FILE_TEMPLATE: &str = r#"<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Untitled</title>
-  <style>
-    body { font-family: -apple-system, system-ui, sans-serif; max-width: 720px; margin: 64px auto; padding: 0 24px; line-height: 1.6; color: #1c1917; }
-    h1 { font-size: 40px; letter-spacing: -0.02em; margin-bottom: 8px; }
-    p { color: #57534e; }
-  </style>
-</head>
-<body>
-  <h1>Untitled</h1>
-  <p>Start writing. Double-click any text in Visual mode to edit it.</p>
-</body>
-</html>
-"#;
-
-/// Built-in starting points for File → New from Template.
-pub const TEMPLATES: &[(&str, &str, &str)] = &[
-    ("dashboard", "Dashboard", include_str!("templates/dashboard.html")),
-    ("report", "Report", include_str!("templates/report.html")),
-    ("landing", "Landing page", include_str!("templates/landing.html")),
-    ("one-pager", "One-pager", include_str!("templates/one-pager.html")),
-];
-
-pub fn new_file(conn: &Connection, dir: &Path) -> Result<FileEntry, String> {
-    new_file_with(conn, dir, "Untitled", NEW_FILE_TEMPLATE)
-}
-
-pub fn new_from_template(conn: &Connection, dir: &Path, template: &str) -> Result<FileEntry, String> {
-    let (_, name, html) = TEMPLATES.iter().find(|(id, _, _)| *id == template).ok_or("Unknown template")?;
-    new_file_with(conn, dir, name, html)
-}
-
-fn new_file_with(conn: &Connection, dir: &Path, stem: &str, html: &str) -> Result<FileEntry, String> {
-    if !dir.is_dir() {
-        return Err(format!("{} is not a folder", dir.display()));
-    }
-    let path = unique_path(dir, stem, "html");
-    std::fs::write(&path, html).map_err(err)?;
-    let id = mark_opened(conn, &path)?;
-    get(conn, id)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -673,7 +705,36 @@ mod tests {
     }
 
     fn q(view: &str, search: Option<&str>) -> Query {
-        Query { view: view.into(), location_id: None, tag_id: None, search: search.map(Into::into), sort: None }
+        Query { view: view.into(), location_id: None, tag_id: None, folder_id: None, search: search.map(Into::into), sort: None }
+    }
+
+    #[test]
+    fn hides_and_moves_files() {
+        let (db, dir) = setup();
+        let conn = db.conn();
+        let a = dir.join("site/a.html");
+        fs::write(&a, "<title>A</title>").unwrap();
+        let site = add_location(&conn, &dir.join("site")).unwrap();
+        let id = index_file(&conn, &a, Some(site)).unwrap();
+
+        set_hidden(&conn, id, true).unwrap();
+        assert!(query(&conn, &q("all", None)).unwrap().is_empty(), "hidden files leave the library views");
+        assert!(query(&conn, &q("all", Some("a"))).unwrap().is_empty(), "and search");
+        assert_eq!(query(&conn, &q("hidden", None)).unwrap().len(), 1);
+        assert_eq!(overview(&conn).unwrap().hidden, 1);
+        assert!(a.exists(), "hiding never touches the file");
+        set_hidden(&conn, id, false).unwrap();
+
+        let folder = create_folder(&conn, "Clients").unwrap();
+        assert!(create_folder(&conn, "clients").is_err(), "folder names are case-insensitive unique");
+        set_folder(&conn, id, Some(folder)).unwrap();
+        let inside = query(&conn, &Query { folder_id: Some(folder), ..q("folder", None) }).unwrap();
+        assert_eq!(inside.len(), 1);
+        assert_eq!(inside[0].folder_id, Some(folder));
+        assert_eq!(overview(&conn).unwrap().folders[0].count, 1);
+        delete_folder(&conn, folder).unwrap();
+        assert_eq!(get(&conn, id).unwrap().folder_id, None, "deleting a folder keeps its files");
+        assert!(a.exists());
     }
 
     #[test]

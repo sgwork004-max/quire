@@ -18,7 +18,7 @@ export function Toasts() {
                 t.action!.run();
                 dismiss(t.id);
               }}
-              className="shrink-0 rounded-md px-2 py-0.5 font-semibold text-[var(--accent)] hover:bg-white/10"
+              className="shrink-0 rounded-md px-2 py-0.5 font-semibold text-bg underline decoration-from-font underline-offset-2 hover:bg-white/10"
             >
               {t.action.label}
             </button>

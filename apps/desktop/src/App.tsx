@@ -3,12 +3,19 @@ import { listen } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { activeTab, HOME, useApp, type Mode, type Viewport } from "./store/app";
-import { useLibrary, type Layout } from "./store/library";
+import { dropPathsOn, useLibrary, type DropTarget, type Layout } from "./store/library";
 import { useAccount } from "./store/account";
 import type { Account } from "./lib/ipc";
 import { errorMessage, ipc, isHtmlPath, type SortKey } from "./lib/ipc";
 import { save } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
+import { ImportDialog } from "./components/ImportDialog";
+import { SettingsDialog, applyAppearance } from "./components/SettingsDialog";
+import { PromptDialog } from "./components/PromptDialog";
+import { useSettings } from "./store/settings";
+import { useImport } from "./store/import";
 import { loadPref } from "./lib/prefs";
+import { runPopupAction } from "./lib/menu";
 import { flushAll, getSession } from "./editor/session";
 import { getFrame, postToFrame } from "./editor/frames";
 import { handleBridgeMessage } from "./editor/bridgeMessages";
@@ -20,14 +27,14 @@ import { DropOverlay } from "./components/DropOverlay";
 import { Toasts } from "./components/Toasts";
 import { SignInDialog } from "./components/Account";
 import { ShareDialog } from "./components/ShareDialog";
-import { AiDialog } from "./components/AiDialog";
 import { DataDialog, useDataDialog } from "./components/DataDialog";
-import { useAi } from "./store/ai";
 import { checkForUpdates } from "./lib/updates";
 import { useCloud } from "./store/cloud";
 import { useComments } from "./store/comments";
 
 const app = () => useApp.getState();
+const IS_MAC = navigator.userAgent.includes("Mac");
+let lastFocusSync = 0;
 const library = () => useLibrary.getState();
 
 /**
@@ -56,7 +63,6 @@ function setActiveMode(mode: Mode) {
 }
 
 const MENU_ACTIONS: Record<string, () => void> = {
-  "new-file": () => void library().newFile(),
   open: () => void app().openDialog(),
   "add-folder": () => void library().addFolder(),
   save: () => {
@@ -66,7 +72,6 @@ const MENU_ACTIONS: Record<string, () => void> = {
       .then(() => ipc.checkpoint(tab.id))
       .then(() => app().toast("Version saved. Your next edit starts a new one."));
   },
-  "ai-edit": () => void useAi.getState().show(),
   "check-updates": () => void checkForUpdates(true),
   "export-pdf": () => void exportActive("pdf"),
   "export-html": () => void exportActive("html"),
@@ -87,7 +92,18 @@ const MENU_ACTIONS: Record<string, () => void> = {
   "close-tab": () => {
     const { activeId, closeTab } = app();
     if (activeId !== HOME) void closeTab(activeId);
+    else void getCurrentWindow().close();
   },
+  "close-window": () => void getCurrentWindow().close(),
+  "reopen-tab": () => app().reopenClosed(),
+  import: () => useImport.getState().show(),
+  help: () => void openUrl("https://github.com/sgwork004-max/quire#readme"),
+  "report-issue": () => void openUrl("https://github.com/sgwork004-max/quire/issues/new"),
+  "new-tab": () => library().focusSearch(),
+  settings: () => useSettings.getState().show(),
+  "next-tab-alt": () => app().cycleTab(1),
+  "prev-tab-alt": () => app().cycleTab(-1),
+  ...Object.fromEntries([1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => [`tab-${n}`, () => app().activateIndex(n)])),
   reveal: () => app().reveal(),
   "open-in-browser": () => app().openInBrowser(),
   reload: () => app().reload(),
@@ -127,6 +143,14 @@ async function exportActive(kind: "pdf" | "html") {
   }
 }
 
+/** The sidebar folder or tag under a point, if any. */
+function dropTargetAt(x: number, y: number): { el: Element; target: DropTarget; label: string } | null {
+  const el = document.elementFromPoint(x, y)?.closest("[data-drop]");
+  const [kind, id] = el?.getAttribute("data-drop")?.split(":") ?? [];
+  if (!el || (kind !== "folder" && kind !== "tag")) return null;
+  return { el, target: { kind, id: Number(id) }, label: el.getAttribute("data-label") ?? "" };
+}
+
 async function restorePrefs() {
   const [sidebarOpen, codeWidth, layout, sort] = await Promise.all([
     loadPref<boolean>("sidebarOpen"),
@@ -135,19 +159,21 @@ async function restorePrefs() {
     loadPref<SortKey>("sort"),
   ]);
   useApp.setState({ ...(sidebarOpen !== undefined && { sidebarOpen }), ...(codeWidth && { codeWidth }) });
+  void applyAppearance();
   useLibrary.setState({ ...(layout && { layout }), ...(sort && { sort }) });
 }
 
 export default function App() {
   const tabs = useApp((s) => s.tabs);
   const activeId = useApp((s) => s.activeId);
-  const sidebarOpen = useApp((s) => s.sidebarOpen);
   const [dragging, setDragging] = useState(false);
+  const [dropLabel, setDropLabel] = useState<string | null>(null);
+  const sidebarOpen = useApp((s) => s.sidebarOpen);
   const reloadTimers = useRef(new Map<string, number>());
 
   useEffect(() => {
     const unlisten: Promise<() => void>[] = [
-      listen<string>("menu", (e) => MENU_ACTIONS[e.payload]?.()),
+      listen<string>("menu", (e) => runPopupAction(e.payload) || MENU_ACTIONS[e.payload]?.()),
       listen<string[]>("open-paths", (e) => void app().openPaths(e.payload)),
       listen("library-changed", () => library().refreshSoon()),
       listen<{ path: string; name: string; updated: boolean }>("inbox-imported", (e) => {
@@ -189,22 +215,56 @@ export default function App() {
       }),
       getCurrentWebview().onDragDropEvent((e) => {
         const p = e.payload;
-        if (p.type === "enter") setDragging(true);
-        else if (p.type === "leave") setDragging(false);
+        // Files from Finder held over a sidebar folder or tag go there instead of opening.
+        const target = "position" in p ? dropTargetAt(p.position.x / devicePixelRatio, p.position.y / devicePixelRatio) : null;
+        document.querySelectorAll("[data-drop-hover]").forEach((el) => el.removeAttribute("data-drop-hover"));
+        if (p.type === "enter" || p.type === "over") {
+          setDragging(true);
+          target?.el.setAttribute("data-drop-hover", "");
+          setDropLabel(target?.label ?? null);
+        } else if (p.type === "leave") setDragging(false);
         else if (p.type === "drop") {
           setDragging(false);
+          if (target) {
+            const html = p.paths.filter(isHtmlPath);
+            if (html.length) void dropPathsOn(target.target, html);
+            return;
+          }
           const html = p.paths.filter(isHtmlPath);
           if (html.length) void app().openPaths(html);
           // Anything else is treated as a folder to add; Rust rejects non-folders.
           for (const path of p.paths.filter((x) => !isHtmlPath(x))) void library().addFolder(path);
         }
       }),
-      getCurrentWindow().onCloseRequested(() => flushAll()),
+      // Catch up with shared files when Quire comes to the front (background sync is slow on purpose).
+      getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+        if (!focused || Date.now() - lastFocusSync < 15_000 || !useAccount.getState().account) return;
+        lastFocusSync = Date.now();
+        void ipc.syncNow().catch(() => undefined);
+      }),
+      // On a Mac, closing the window keeps Quire running (click the Dock icon to bring it back); ⌘Q quits.
+      getCurrentWindow().onCloseRequested(async (e) => {
+        await flushAll();
+        if (IS_MAC) {
+          e.preventDefault();
+          await getCurrentWindow().hide();
+        }
+      }),
     ];
     window.addEventListener("message", handleBridgeMessage);
     // In-app menus reuse the native menu's actions.
     const appMenu = (e: Event) => MENU_ACTIONS[(e as CustomEvent<string>).detail]?.();
     window.addEventListener("quire-menu", appMenu);
+    // ⌃Tab never reaches the menu bar on macOS, so handle tab shortcuts here (and in documents, via the bridge).
+    const tabKeys = (e: KeyboardEvent) => {
+      if (!e.ctrlKey || e.metaKey || e.altKey) return;
+      const name = e.key === "Tab" ? (e.shiftKey ? "prev-tab" : "next-tab") : e.key.toLowerCase() === "t" && !e.shiftKey ? "new-tab" : null;
+      if (!name) return;
+      e.preventDefault();
+      e.stopPropagation();
+      MENU_ACTIONS[name]();
+    };
+    window.addEventListener("keydown", tabKeys, true);
 
     // Listeners must be attached before asking for files queued at launch.
     void Promise.all(unlisten)
@@ -218,13 +278,14 @@ export default function App() {
     return () => {
       window.removeEventListener("message", handleBridgeMessage);
       window.removeEventListener("quire-menu", appMenu);
+      window.removeEventListener("keydown", tabKeys, true);
       unlisten.forEach((u) => void u.then((f) => f()));
     };
   }, []);
 
   return (
     <div className="flex h-full overflow-hidden">
-      {sidebarOpen && <Sidebar />}
+      <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         <TabBar />
         <div className={activeId === HOME ? "flex min-h-0 flex-1" : "hidden"}>
@@ -234,11 +295,13 @@ export default function App() {
           <DocView key={t.id} tab={t} visible={t.id === activeId} />
         ))}
       </main>
-      {dragging && <DropOverlay />}
+      {dragging && <DropOverlay target={dropLabel} left={sidebarOpen ? 240 : 78} />}
       <SignInDialog />
       <ShareDialog />
-      <AiDialog />
       <DataDialog />
+      <ImportDialog />
+      <SettingsDialog />
+      <PromptDialog />
       <Toasts />
     </div>
   );

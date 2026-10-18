@@ -1,8 +1,10 @@
-//! Downloads import: HTML that AI chats (ChatGPT, claude.ai, Gemini…) save to
-//! ~/Downloads is copied into ~/Quire/Inbox automatically. A re-download of
-//! the same file (`report (1).html`) updates `report.html` in Quire instead of
-//! adding a copy, with the old content kept in version history. The Downloads
-//! folder itself is never changed.
+//! Importing HTML into Quire. HTML that AI chats (ChatGPT, claude.ai,
+//! Gemini…) save to ~/Downloads, and HTML saved to ~/Desktop, is copied into
+//! ~/Quire/Inbox automatically. A re-download of the same file
+//! (`report (1).html`) updates `report.html` in Quire instead of adding a
+//! copy, with the old content kept in version history. Manual imports pick
+//! their sources (folders or files) and destination each time. Source files
+//! are never changed.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -46,6 +48,15 @@ pub fn downloads_dir() -> Option<PathBuf> {
     home().map(|h| h.join("Downloads"))
 }
 
+pub fn desktop_dir() -> Option<PathBuf> {
+    home().map(|h| h.join("Desktop"))
+}
+
+/// Folders watched for new HTML while automatic import is on.
+fn watched_dirs() -> Vec<PathBuf> {
+    [downloads_dir(), desktop_dir()].into_iter().flatten().filter(|d| d.is_dir()).collect()
+}
+
 pub fn inbox_dir() -> Option<PathBuf> {
     home().map(|h| h.join("Quire").join("Inbox"))
 }
@@ -72,6 +83,11 @@ fn modified_ms(meta: &std::fs::Metadata) -> i64 {
 
 /// Copies one download into the Inbox (or updates its earlier copy).
 fn import(app: &AppHandle, download: &Path) -> Option<Imported> {
+    import_into(app, download, &inbox_dir()?)
+}
+
+/// Copies one HTML file into `dir` (or updates the copy already there).
+fn import_into(app: &AppHandle, download: &Path, dir: &Path) -> Option<Imported> {
     let name = download.file_name()?.to_string_lossy().into_owned();
     if name.starts_with('.') || !is_html(download) {
         return None;
@@ -88,8 +104,7 @@ fn import(app: &AppHandle, download: &Path) -> Option<Imported> {
     let html = String::from_utf8_lossy(&std::fs::read(download).ok()?).into_owned();
     inbox.seen.lock().unwrap().insert(download.to_path_buf(), key);
 
-    let dir = inbox_dir()?;
-    std::fs::create_dir_all(&dir).ok()?;
+    std::fs::create_dir_all(dir).ok()?;
     let target_name = canonical_name(&name);
     let target = dir.join(&target_name);
     let existed = target.exists();
@@ -136,7 +151,7 @@ fn handle(app: &AppHandle, paths: Vec<PathBuf>) {
 }
 
 fn start_watching(app: &AppHandle) -> Result<(), String> {
-    let downloads = downloads_dir().ok_or("No Downloads folder")?;
+    let dirs = watched_dirs();
     ensure_library_folder(app);
     let handle_app = app.clone();
     let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
@@ -149,20 +164,21 @@ fn start_watching(app: &AppHandle) -> Result<(), String> {
         }
     })
     .map_err(|e| e.to_string())?;
-    watcher.watch(&downloads, RecursiveMode::NonRecursive).map_err(|e| e.to_string())?;
+    for dir in &dirs {
+        if let Err(e) = watcher.watch(dir, RecursiveMode::NonRecursive) {
+            eprintln!("import: can't watch {}: {e}", dir.display());
+        }
+    }
     *app.state::<Inbox>().watcher.lock().unwrap() = Some(watcher);
 
-    // Pick up anything downloaded while Quire was closed.
+    // Pick up anything saved while Quire was closed.
     let since: i64 = setting(&app.state::<Db>().conn(), SINCE).and_then(|v| v.parse().ok()).unwrap_or_else(now_ms);
-    let missed: Vec<PathBuf> = std::fs::read_dir(&downloads)
-        .map(|entries| {
-            entries
-                .flatten()
-                .map(|e| e.path())
-                .filter(|p| is_html(p) && std::fs::metadata(p).map(|m| modified_ms(&m) > since).unwrap_or(false))
-                .collect()
-        })
-        .unwrap_or_default();
+    let missed: Vec<PathBuf> = dirs
+        .iter()
+        .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
+        .map(|e| e.path())
+        .filter(|p| is_html(p) && std::fs::metadata(p).map(|m| modified_ms(&m) > since).unwrap_or(false))
+        .collect();
     if !missed.is_empty() {
         handle(app, missed);
     }
@@ -196,6 +212,8 @@ pub fn start(app: &AppHandle) {
 pub struct InboxStatus {
     enabled: bool,
     downloads: String,
+    desktop: String,
+    documents: String,
     inbox: String,
     /// HTML files in Downloads from before import was switched on.
     past_count: usize,
@@ -205,12 +223,16 @@ pub struct InboxStatus {
 pub fn inbox_status(db: State<'_, Db>) -> Result<InboxStatus, String> {
     let downloads = downloads_dir().ok_or("No Downloads folder")?;
     let since: i64 = setting(&db.conn(), SINCE).and_then(|v| v.parse().ok()).unwrap_or_else(now_ms);
-    let past_count = std::fs::read_dir(&downloads)
-        .map(|e| e.flatten().filter(|e| is_html(&e.path()) && e.metadata().map(|m| modified_ms(&m) <= since).unwrap_or(false)).count())
-        .unwrap_or(0);
+    let past_count = watched_dirs()
+        .iter()
+        .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
+        .filter(|e| is_html(&e.path()) && e.metadata().map(|m| modified_ms(&m) <= since).unwrap_or(false))
+        .count();
     Ok(InboxStatus {
         enabled: setting(&db.conn(), ENABLED).map(|v| v == "1").unwrap_or(true),
         downloads: downloads.to_string_lossy().into_owned(),
+        desktop: desktop_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(),
+        documents: home().map(|h| h.join("Documents").to_string_lossy().into_owned()).unwrap_or_default(),
         inbox: inbox_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(),
         past_count,
     })
@@ -229,27 +251,116 @@ pub fn set_inbox_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
     }
 }
 
-/// One-time import of HTML files already in Downloads. Returns how many.
+/// Folders skipped when looking for HTML: app bundles, code dependencies and caches.
+const SKIP_DIRS: &[&str] = &["node_modules", "Library", "Applications", "target", "dist", "build", "vendor", "__pycache__"];
+const SCAN_DEPTH: usize = 4;
+const SCAN_LIMIT: usize = 5000;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Candidate {
+    path: String,
+    name: String,
+    size_bytes: u64,
+    modified_ms: i64,
+}
+
+fn scan_dir(dir: &Path, depth: usize, out: &mut Vec<Candidate>) {
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    for e in entries.flatten() {
+        if out.len() >= SCAN_LIMIT {
+            return;
+        }
+        let path = e.path();
+        let name = e.file_name().to_string_lossy().into_owned();
+        if name.starts_with('.') {
+            continue;
+        }
+        let Ok(ft) = e.file_type() else { continue };
+        if ft.is_dir() {
+            if depth > 0 && !SKIP_DIRS.contains(&name.as_str()) && !name.ends_with(".app") {
+                scan_dir(&path, depth - 1, out);
+            }
+        } else if ft.is_file() && is_html(&path) {
+            if let Ok(m) = e.metadata() {
+                if m.len() > 0 && m.len() <= MAX_BYTES {
+                    out.push(Candidate { path: path.to_string_lossy().into_owned(), name, size_bytes: m.len(), modified_ms: modified_ms(&m) });
+                }
+            }
+        }
+    }
+}
+
+/// Finds the HTML files an import would bring in: everything inside `folders`
+/// (a few levels deep) plus the individually chosen `files`.
+#[tauri::command(async)]
+pub fn import_scan(folders: Vec<String>, files: Vec<String>) -> Result<Vec<Candidate>, String> {
+    let mut out = Vec::new();
+    for f in &folders {
+        scan_dir(Path::new(f), SCAN_DEPTH, &mut out);
+    }
+    for f in &files {
+        let p = Path::new(f);
+        if let (true, Ok(m)) = (is_html(p), std::fs::metadata(p)) {
+            if m.is_file() && m.len() <= MAX_BYTES {
+                let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+                out.push(Candidate { path: f.clone(), name, size_bytes: m.len(), modified_ms: modified_ms(&m) });
+            }
+        }
+    }
+    out.sort_by(|a, b| a.path.cmp(&b.path));
+    out.dedup_by(|a, b| a.path == b.path);
+    Ok(out)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportSummary {
+    added: usize,
+    updated: usize,
+    unchanged: usize,
+    /// Library ids of the imported copies (new, updated or already there).
+    ids: Vec<i64>,
+}
+
+/// Copies the given HTML files into `dest` (a library folder; ~/Quire/Inbox
+/// when empty). Files already there with the same content are left alone.
 #[tauri::command]
-pub async fn import_past_downloads(app: AppHandle) -> Result<usize, String> {
-    let downloads = downloads_dir().ok_or("No Downloads folder")?;
+pub async fn import_paths(app: AppHandle, paths: Vec<String>, dest: Option<String>) -> Result<ImportSummary, String> {
     ensure_library_folder(&app);
-    // Oldest first, so the newest download of each name ends up current.
-    let mut files: Vec<(i64, PathBuf)> = std::fs::read_dir(&downloads)
-        .map_err(|e| e.to_string())?
-        .flatten()
-        .filter(|e| is_html(&e.path()))
-        .filter_map(|e| e.metadata().ok().map(|m| (modified_ms(&m), e.path())))
+    let dest = match dest.filter(|d| !d.is_empty()) {
+        Some(d) => PathBuf::from(d),
+        None => inbox_dir().ok_or("No home folder")?,
+    };
+    // Oldest first, so the newest file of each name ends up current.
+    let mut files: Vec<(i64, PathBuf)> = paths
+        .iter()
+        .map(PathBuf::from)
+        .filter_map(|p| std::fs::metadata(&p).ok().map(|m| (modified_ms(&m), p)))
         .collect();
     files.sort();
-    let mut count = 0;
+    let mut summary = ImportSummary { added: 0, updated: 0, unchanged: 0, ids: Vec::new() };
     for (_, p) in files {
-        if import(&app, &p).is_some() {
-            count += 1;
+        // A manual import always reconsiders the file, even if auto-import saw it.
+        app.state::<Inbox>().seen.lock().unwrap().remove(&p);
+        match import_into(&app, &p, &dest) {
+            Some(i) if i.updated => summary.updated += 1,
+            Some(_) => summary.added += 1,
+            None => summary.unchanged += 1,
+        }
+        if let Some(name) = p.file_name() {
+            let target = dest.join(canonical_name(&name.to_string_lossy()));
+            let conn = app.state::<Db>();
+            let id = conn.conn().query_row("SELECT id FROM files WHERE path = ?1", [target.to_string_lossy()], |r| r.get::<_, i64>(0));
+            if let Ok(id) = id {
+                if !summary.ids.contains(&id) {
+                    summary.ids.push(id);
+                }
+            }
         }
     }
     let _ = app.emit("library-changed", ());
-    Ok(count)
+    Ok(summary)
 }
 
 #[cfg(test)]

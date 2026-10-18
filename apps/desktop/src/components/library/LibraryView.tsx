@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
-import { ArrowDownUp, FolderPlus, LayoutGrid, List, Search, Trash2, X } from "lucide-react";
-import { useLibrary, type LibraryView as View } from "../../store/library";
+import { ArrowDownUp, Eye, EyeOff, FolderInput, FolderPlus, LayoutGrid, List, Search, Tag as TagIcon, Trash2, X } from "lucide-react";
+import { folderMenuItems, useLibrary, type LibraryView as View } from "../../store/library";
 import { useApp } from "../../store/app";
 import type { Overview, SortKey } from "../../lib/ipc";
 import { popupMenu } from "../../lib/menu";
@@ -27,10 +27,14 @@ function viewTitle(view: View, overview: Overview | null): string {
       return "Starred";
     case "trash":
       return "Trash";
+    case "hidden":
+      return "Hidden";
     case "shared":
       return "Shared with me";
     case "location":
       return overview?.locations.find((l) => l.id === view.id)?.name ?? "Folder";
+    case "folder":
+      return overview?.folders.find((f) => f.id === view.id)?.name ?? "Folder";
     case "tag":
       return overview?.tags.find((t) => t.id === view.id)?.name ?? "Tag";
   }
@@ -41,7 +45,8 @@ export function LibraryView() {
   const { setSearch, setSort, setLayout, emptyTrash } = useLibrary.getState();
   const searchRef = useRef<HTMLInputElement>(null);
   const searching = search.trim().length > 0;
-  const showList = layout === "list" || searching;
+  const showList = layout === "list";
+  const selected = useLibrary((s) => s.selected);
 
   useEffect(() => {
     if (searchFocus) searchRef.current?.select();
@@ -57,7 +62,7 @@ export function LibraryView() {
     <div className="flex min-h-0 flex-1 flex-col bg-bg">
       <div className="flex shrink-0 flex-wrap items-center gap-3 px-8 pb-4 pt-6">
         <div className="min-w-0 flex-1">
-          <h1 className="flex items-center gap-2 text-[22px] font-semibold tracking-[-0.015em] text-ink">
+          <h1 className="flex items-center gap-2 font-display text-[24px] font-bold tracking-[-0.025em] text-ink">
             {tag && <span className="h-3 w-3 rounded-full" style={{ background: tag.color }} />}
             <span className="truncate">{viewTitle(view, overview)}</span>
           </h1>
@@ -69,6 +74,7 @@ export function LibraryView() {
                 : "Loading…"}
             {location && ` · ${location.path}`}
             {view.kind === "trash" && " · Files are kept for 30 days"}
+            {view.kind === "hidden" && " · Hidden files stay on disk; they're just kept out of the library"}
           </p>
         </div>
 
@@ -128,7 +134,19 @@ export function LibraryView() {
       </div>
 
       <InboxBanner />
-      <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-10">
+      {selected.length > 0 && <SelectionBar ids={selected} />}
+      <div
+        className="min-h-0 flex-1 overflow-y-auto px-6 pb-10"
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") useLibrary.getState().clearSelection();
+          if (e.key === "a" && (e.metaKey || e.ctrlKey) && !(e.target instanceof HTMLInputElement)) {
+            e.preventDefault();
+            useLibrary.getState().selectAll();
+          }
+        }}
+        onMouseDown={(e) => e.target === e.currentTarget && useLibrary.getState().clearSelection()}
+      >
         {view.kind === "shared" ? (
           <SharedView />
         ) : !loaded ? null : files.length === 0 ? (
@@ -151,6 +169,52 @@ export function LibraryView() {
   );
 }
 
+/** Bulk actions for the files picked with ⌘-click or ⇧-click. */
+function SelectionBar({ ids }: { ids: number[] }) {
+  const s = useLibrary.getState();
+  const overview = useLibrary((st) => st.overview);
+  const allFiles = useLibrary((st) => st.files);
+  const hidden = useLibrary((st) => st.view.kind === "hidden");
+  const tags = overview?.tags ?? [];
+  const files = allFiles.filter((f) => ids.includes(f.id));
+  const btn = "flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12.5px] text-ink hover:bg-hover";
+  return (
+    <div className="mx-8 mb-3 flex items-center gap-1 rounded-xl border border-accent/40 bg-accent-soft px-2 py-1">
+      <span className="px-2 text-[12.5px] font-medium text-ink">{ids.length} selected</span>
+      <span className="mx-1 h-4 w-px bg-line-strong" />
+      <button
+        type="button"
+        className={btn}
+        onClick={() =>
+          void popupMenu(
+            tags.length
+              ? tags.map((t) => ({ text: t.name, checked: files.every((f) => f.tagIds.includes(t.id)), action: () => void s.tagFiles(ids, t.id) }))
+              : [{ text: "Create a tag in the sidebar first", enabled: false }],
+          )
+        }
+      >
+        <TagIcon size={13.5} /> Tag
+      </button>
+      <button type="button" className={btn} onClick={() => void popupMenu(folderMenuItems(useLibrary.getState(), ids))}>
+        <FolderInput size={13.5} /> Add to Folder
+      </button>
+      <button type="button" className={btn} onClick={() => void s.setHidden(ids, !hidden)}>
+        {hidden ? <Eye size={13.5} /> : <EyeOff size={13.5} />} {hidden ? "Show in Library" : "Hide"}
+      </button>
+      <button type="button" className={btn} onClick={() => void s.trashFiles(ids)}>
+        <Trash2 size={13.5} /> Trash
+      </button>
+      <span className="flex-1" />
+      <button type="button" className={btn} onClick={s.selectAll}>
+        Select all
+      </button>
+      <IconButton label="Clear selection" onClick={s.clearSelection}>
+        <X size={14} />
+      </IconButton>
+    </div>
+  );
+}
+
 function EmptyView({ view, searching, search, overview }: { view: View; searching: boolean; search: string; overview: Overview | null }) {
   const { addFolder } = useLibrary.getState();
   const { openDialog } = useApp.getState();
@@ -161,10 +225,10 @@ function EmptyView({ view, searching, search, overview }: { view: View; searchin
     return (
       <div className="flex justify-center pt-[8vh]">
         <div className="w-full max-w-[420px] text-center">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgb(0_0_0/0.04)]">
-            <Logo size={30} />
+          <div className="mx-auto mb-5 w-fit drop-shadow-[0_6px_14px_rgb(20_23_28/0.18)]">
+            <Logo size={56} />
           </div>
-          <h2 className="text-[20px] font-semibold tracking-[-0.01em] text-ink">Your HTML, in one place</h2>
+          <h2 className="font-display text-[24px] font-bold tracking-[-0.025em] text-ink">Your HTML, in one place</h2>
           <p className="mx-auto mt-1.5 max-w-[340px] text-[13px] leading-relaxed text-ink-2">
             Add the folders where your reports, dashboards and pages live. Quire finds every HTML file, keeps them in sync and makes them searchable.
           </p>
@@ -195,7 +259,9 @@ function EmptyView({ view, searching, search, overview }: { view: View; searchin
     recent: ["Nothing opened yet", "Files you open show up here."],
     starred: ["No starred files", "Star a file to keep it one click away."],
     trash: ["Trash is empty", "Files you delete stay here for 30 days."],
+    hidden: ["No hidden files", "Right-click a file and choose Hide from Library to keep it out of sight without deleting it."],
     location: ["No HTML files in this folder", "Quire is watching it. New files show up automatically."],
+    folder: ["This folder is empty", "Drag files here from the library, or select files and choose Add to Folder."],
     shared: ["", ""],
     tag: ["Nothing tagged yet", "Right-click a file and choose Tags."],
   };

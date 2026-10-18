@@ -129,8 +129,8 @@ function CodePane({ tab }: { tab: Tab }) {
 function ConflictBanner({ id }: { id: string }) {
   const resolve = (keep: "mine" | "theirs") => getSession(id)?.resolveConflict(keep);
   return (
-    <div className="flex shrink-0 items-center gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-[12.5px] text-ink">
-      <AlertTriangle size={15} className="shrink-0 text-amber-600" />
+    <div className="flex shrink-0 items-center gap-3 border-b border-others/40 bg-others-soft px-4 py-2 text-[12.5px] text-ink">
+      <AlertTriangle size={15} className="shrink-0 text-others-ink" />
       <span className="flex-1">This file was changed outside Quire while you were editing.</span>
       <button type="button" onClick={() => resolve("theirs")} className="rounded-md px-2.5 py-1 font-medium text-ink-2 hover:bg-hover hover:text-ink">
         Use the file on disk
@@ -162,17 +162,17 @@ function StatusBar({ tab }: { tab: Tab }) {
         <span
           className={clsx(
             "flex items-center gap-1.5",
-            status === "error" ? "text-accent" : status === "conflict" ? "text-amber-600" : "text-ink-2",
+            status === "error" ? "text-danger" : status === "conflict" ? "text-others-ink" : "text-ink-2",
           )}
         >
-          <span className={clsx("h-1.5 w-1.5 rounded-full", status === "saved" ? "bg-emerald-500" : status === "error" ? "bg-accent" : "bg-amber-500")} />
+          <span className={clsx("h-1.5 w-1.5 rounded-full", status === "saved" ? "bg-success" : status === "error" ? "bg-danger" : status === "conflict" ? "bg-others" : "bg-ink-3")} />
           {STATUS_LABEL[status]}
         </span>
       ) : (
         <span className="flex items-center gap-1.5 text-ink-2" title="Reloads automatically when the file changes on disk">
           <span className="relative flex h-1.5 w-1.5">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-50" />
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-50" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
           </span>
           Live
         </span>

@@ -333,7 +333,7 @@ function ActionButton({ icon, label, onClick, danger }: { icon: ReactNode; label
       onClick={onClick}
       className={clsx(
         "flex h-8 flex-1 items-center justify-center gap-1.5 rounded-lg border border-line-strong bg-surface text-[12px] font-medium transition-colors",
-        danger ? "text-accent hover:bg-accent-soft" : "text-ink hover:bg-hover",
+        danger ? "text-danger hover:bg-danger-soft" : "text-ink hover:bg-hover",
       )}
     >
       {icon}

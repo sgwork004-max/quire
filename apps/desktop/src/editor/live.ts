@@ -7,8 +7,9 @@ import { useApp, type Peer } from "../store/app";
 import { useAccount } from "../store/account";
 import { ensureSession, getSession } from "./session";
 
-/** Cursor colours for collaborators: distinct, readable on light and dark. */
-const COLORS = ["#e2513a", "#2f7a4d", "#3b6fe0", "#8b5cf6", "#d4458f", "#1e9bb0", "#e8890c", "#5c5752"];
+/** Cursor and avatar colours for collaborators. */
+// Light print inks, all distinct from federal blue (which means "you"); names sit on them in dark ink.
+const COLORS = ["#ffb511", "#ff8a3d", "#ff7ac0", "#5fd3a0", "#c4a5f0", "#e8c58a", "#7fd4e0", "#f2e15b"];
 
 function colorFor(id: string) {
   let h = 0;

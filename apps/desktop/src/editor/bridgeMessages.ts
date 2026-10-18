@@ -13,7 +13,8 @@ type BridgeMessage =
   | { type: "undo-parent" }
   | { type: "redo-parent" }
   | { type: "editing"; on: boolean }
-  | { type: "pin"; id: string };
+  | { type: "pin"; id: string }
+  | { type: "shortcut"; name: "next-tab" | "prev-tab" | "new-tab" };
 
 /**
  * Handles messages from the bridge script inside a preview. Only messages
@@ -30,6 +31,10 @@ export function handleBridgeMessage(e: MessageEvent) {
 
   if (msg.type === "ready") {
     onFrameReady(id);
+    return;
+  }
+  if (msg.type === "shortcut") {
+    window.dispatchEvent(new CustomEvent("quire-menu", { detail: msg.name }));
     return;
   }
   const comments = useComments.getState();

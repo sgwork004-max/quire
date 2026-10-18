@@ -12,7 +12,7 @@
   "r2_buckets": [{ "binding": "BLOBS", "bucket_name": "quire-blobs" }],
   "vars": {
     // Free plan: total shared content per owner, in megabytes.
-    "QUOTA_MB": "100"
+    "QUOTA_MB": "25"
   },
   "d1_databases": [
     {

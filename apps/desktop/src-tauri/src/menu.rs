@@ -14,6 +14,8 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .about(None)
         .item(&MenuItemBuilder::with_id("check-updates", "Check for Updates…").build(app)?)
         .separator()
+        .item(&item("settings", "Settings…", "CmdOrCtrl+,")?)
+        .separator()
         .services()
         .separator()
         .hide()
@@ -24,7 +26,8 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .build()?;
 
     let file = SubmenuBuilder::new(app, "File")
-        .item(&item("new-file", "New HTML File", "CmdOrCtrl+N")?)
+        .item(&item("new-tab", "New Tab", "CmdOrCtrl+T")?)
+        .item(&item("import", "Import HTML…", "CmdOrCtrl+Shift+I")?)
         .item(&item("open", "Open…", "CmdOrCtrl+O")?)
         .item(&item("add-folder", "Add Folder to Library…", "CmdOrCtrl+Shift+O")?)
         .separator()
@@ -34,7 +37,10 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .item(&item("export-pdf", "Export as PDF…", "CmdOrCtrl+P")?)
         .item(&item("export-html", "Export as Single HTML File…", "CmdOrCtrl+Shift+E")?)
         .separator()
+        // Like Chrome: ⌘W closes the tab, or the window when the Library is showing.
         .item(&item("close-tab", "Close Tab", "CmdOrCtrl+W")?)
+        .item(&item("close-window", "Close Window", "CmdOrCtrl+Shift+W")?)
+        .item(&item("reopen-tab", "Reopen Closed Tab", "CmdOrCtrl+Shift+T")?)
         .separator()
         .item(&item("reveal", "Show in Finder", "CmdOrCtrl+Shift+R")?)
         .item(&item("open-in-browser", "Open in Browser", "CmdOrCtrl+Shift+B")?)
@@ -54,11 +60,11 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .select_all()
         .separator()
         .item(&item("search", "Search Library", "CmdOrCtrl+K")?)
-        .item(&item("ai-edit", "Edit with AI…", "CmdOrCtrl+J")?)
         .build()?;
 
     let view = SubmenuBuilder::new(app, "View")
         .item(&item("library", "Library", "CmdOrCtrl+Shift+L")?)
+        .item(&item("toggle-sidebar", "Collapse Sidebar", "CmdOrCtrl+\\")?)
         .separator()
         .item(&item("mode-view", "Preview", "CmdOrCtrl+Alt+1")?)
         .item(&item("mode-visual", "Visual Editor", "CmdOrCtrl+Alt+2")?)
@@ -67,26 +73,38 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .item(&item("comments", "Comments", "CmdOrCtrl+Shift+M")?)
         .item(&item("new-comment", "Add Comment", "CmdOrCtrl+Alt+M")?)
         .separator()
-        .item(&item("reload", "Reload", "CmdOrCtrl+R")?)
-        .item(&item("toggle-sidebar", "Toggle Sidebar", "CmdOrCtrl+\\")?)
+        .item(&item("reload", "Reload Page", "CmdOrCtrl+R")?)
         .separator()
-        .item(&item("viewport-fit", "Fit Window", "CmdOrCtrl+0")?)
-        .item(&item("viewport-desktop", "Desktop Width", "CmdOrCtrl+1")?)
-        .item(&item("viewport-tablet", "Tablet Width", "CmdOrCtrl+2")?)
-        .item(&item("viewport-mobile", "Mobile Width", "CmdOrCtrl+3")?)
+        .item(&item("viewport-fit", "Fit Window", "Ctrl+CmdOrCtrl+0")?)
+        .item(&item("viewport-desktop", "Desktop Width", "Ctrl+CmdOrCtrl+1")?)
+        .item(&item("viewport-tablet", "Tablet Width", "Ctrl+CmdOrCtrl+2")?)
+        .item(&item("viewport-mobile", "Mobile Width", "Ctrl+CmdOrCtrl+3")?)
         .separator()
         .fullscreen()
         .build()?;
 
-    let window = SubmenuBuilder::new(app, "Window")
-        .item(&item("next-tab", "Show Next Tab", "CmdOrCtrl+Shift+]")?)
-        .item(&item("prev-tab", "Show Previous Tab", "CmdOrCtrl+Shift+[")?)
-        .separator()
+    let mut window = SubmenuBuilder::new(app, "Window")
         .minimize()
         .maximize()
+        .separator()
+        .item(&item("next-tab", "Show Next Tab", "Ctrl+Tab")?)
+        .item(&item("prev-tab", "Show Previous Tab", "Ctrl+Shift+Tab")?)
+        .item(&item("next-tab-alt", "Select Next Tab", "CmdOrCtrl+Shift+]")?)
+        .item(&item("prev-tab-alt", "Select Previous Tab", "CmdOrCtrl+Shift+[")?)
+        .separator();
+    // ⌘1…⌘8 jump to a tab by position (Library first), ⌘9 to the last, as in Chrome.
+    for n in 1..=9 {
+        let label = if n == 9 { "Last Tab".to_string() } else { format!("Tab {n}") };
+        window = window.item(&item(&format!("tab-{n}"), &label, &format!("CmdOrCtrl+{n}"))?);
+    }
+    let window = window.separator().bring_all_to_front().build()?;
+
+    let help = SubmenuBuilder::new(app, "Help")
+        .item(&MenuItemBuilder::with_id("help", "Quire Help").build(app)?)
+        .item(&MenuItemBuilder::with_id("report-issue", "Report an Issue…").build(app)?)
         .build()?;
 
     MenuBuilder::new(app)
-        .items(&[&app_menu, &file, &edit, &view, &window])
+        .items(&[&app_menu, &file, &edit, &view, &window, &help])
         .build()
 }

@@ -57,7 +57,7 @@ async function usedBytes(env: Env, ownerId: string, excluding?: string): Promise
   return r?.used ?? 0;
 }
 
-const quotaBytes = (env: Env) => Number(env.QUOTA_MB || "100") * 1024 * 1024;
+const quotaBytes = (env: Env) => Number(env.QUOTA_MB || "25") * 1024 * 1024;
 
 /** Asset paths are relative, inside the document's folder, never hidden. */
 function validAssets(assets: unknown): AssetInput[] | null {
@@ -119,7 +119,15 @@ sharing.get("/", async (c) => {
     .bind(u.id, u.email.toLowerCase())
     .all();
   const used = await usedBytes(c.env, u.id);
-  return c.json({ documents: results, usage: { usedBytes: used, quotaBytes: quotaBytes(c.env) } });
+  // Unread notifications ride along so the desktop app's background sync needs one request, not two.
+  const unread = await c.env.DB.prepare(
+    `SELECT COUNT(*) AS n FROM notification n JOIN document d ON d.id = n.documentId
+     WHERE n.recipientEmail = ?1 AND n.readAt IS NULL
+       AND (d.ownerId = ?2 OR EXISTS (SELECT 1 FROM member m WHERE m.documentId = d.id AND m.email = n.recipientEmail))`,
+  )
+    .bind(u.email.toLowerCase(), u.id)
+    .first<number>("n");
+  return c.json({ documents: results, usage: { usedBytes: used, quotaBytes: quotaBytes(c.env) }, unread: unread ?? 0 });
 });
 
 /** Shares a file: creates the cloud document with its HTML. Assets follow via /blobs and /assets. */

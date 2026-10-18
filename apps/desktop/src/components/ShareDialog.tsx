@@ -159,7 +159,7 @@ export function ShareDialog() {
             </button>
           </form>
         )}
-        {error && <p className="px-6 pt-2 text-[12px] text-accent">{error}</p>}
+        {error && <p className="px-6 pt-2 text-[12px] text-danger">{error}</p>}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-2 pt-3">
           <h3 className="text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">People with access</h3>
@@ -184,7 +184,7 @@ export function ShareDialog() {
                         type="button"
                         aria-label={`Remove ${m.email}`}
                         onClick={() => void update(() => ipc.shareRemove(details.id, m.email))}
-                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-3 hover:bg-hover hover:text-accent"
+                        className="flex h-8 w-8 items-center justify-center rounded-md text-ink-3 hover:bg-danger-soft hover:text-danger"
                       >
                         <X size={14} />
                       </button>

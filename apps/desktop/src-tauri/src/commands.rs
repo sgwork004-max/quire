@@ -223,6 +223,40 @@ pub fn trash_file(db: State<'_, Db>, id: i64) -> R<()> {
 }
 
 #[tauri::command(async)]
+pub fn set_hidden(db: State<'_, Db>, ids: Vec<i64>, hidden: bool) -> R<()> {
+    let conn = db.conn();
+    for id in ids {
+        library::set_hidden(&conn, id, hidden)?;
+    }
+    Ok(())
+}
+
+#[tauri::command(async)]
+pub fn create_folder(db: State<'_, Db>, name: String) -> R<i64> {
+    library::create_folder(&db.conn(), &name)
+}
+
+#[tauri::command(async)]
+pub fn rename_folder(db: State<'_, Db>, id: i64, name: String) -> R<()> {
+    library::rename_folder(&db.conn(), id, &name)
+}
+
+#[tauri::command(async)]
+pub fn delete_folder(db: State<'_, Db>, id: i64) -> R<()> {
+    library::delete_folder(&db.conn(), id)
+}
+
+/// Puts files in a Quire folder (`None` takes them out of any folder).
+#[tauri::command(async)]
+pub fn set_files_folder(db: State<'_, Db>, ids: Vec<i64>, folder: Option<i64>) -> R<()> {
+    let conn = db.conn();
+    for id in ids {
+        library::set_folder(&conn, id, folder)?;
+    }
+    Ok(())
+}
+
+#[tauri::command(async)]
 pub fn restore_file(db: State<'_, Db>, id: i64) -> R<FileEntry> {
     library::restore(&db, id)
 }
@@ -230,28 +264,6 @@ pub fn restore_file(db: State<'_, Db>, id: i64) -> R<FileEntry> {
 #[tauri::command(async)]
 pub fn empty_trash(db: State<'_, Db>) -> R<usize> {
     library::empty_trash(&db, None)
-}
-
-#[tauri::command(async)]
-pub fn new_file(app: AppHandle, db: State<'_, Db>, dir: String, template: Option<String>) -> R<FileEntry> {
-    // No folder chosen: use ~/Quire, the default home for new files (also used by the CLI and MCP server).
-    let dir = if dir.is_empty() {
-        let quire = crate::home_dir().ok_or("No home folder")?.join("Quire");
-        std::fs::create_dir_all(&quire).map_err(err)?;
-        let quire = crate::documents::dunce_canonicalize(&quire)?;
-        let known = library::locations(&db.conn())?.iter().any(|(_, p)| *p == quire);
-        if !known {
-            let id = library::add_location(&db.conn(), &quire)?;
-            scan::start_location(&app, id, quire.clone());
-        }
-        quire.to_string_lossy().into_owned()
-    } else {
-        dir
-    };
-    match template {
-        Some(t) => library::new_from_template(&db.conn(), Path::new(&dir), &t),
-        None => library::new_file(&db.conn(), Path::new(&dir)),
-    }
 }
 
 // ---------------------------------------------------------------- versions

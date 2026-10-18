@@ -8,7 +8,6 @@ import {
   Monitor,
   MoreHorizontal,
   MousePointer2,
-  PanelLeftOpen,
   RotateCw,
   Scan,
   Smartphone,
@@ -19,8 +18,7 @@ import {
 } from "lucide-react";
 import { useCloud } from "../store/cloud";
 import { useComments } from "../store/comments";
-import { MessageSquare, Sparkles } from "lucide-react";
-import { useAi } from "../store/ai";
+import { MessageSquare } from "lucide-react";
 import { useDataDialog } from "./DataDialog";
 import { HOME, useApp, type Mode, type Tab, type Viewport } from "../store/app";
 import { popupMenu } from "../lib/menu";
@@ -108,7 +106,7 @@ function DocTab({ tab, active }: { tab: Tab; active: boolean }) {
         className="group/close relative flex h-5 w-5 shrink-0 items-center justify-center rounded text-ink-3 hover:bg-active hover:text-ink"
       >
         {unsaved && (
-          <span className={clsx("h-2 w-2 rounded-full group-hover/close:hidden", status === "conflict" ? "bg-amber-500" : "bg-ink-3")} />
+          <span className={clsx("h-2 w-2 rounded-full group-hover/close:hidden", status === "conflict" ? "bg-others" : "bg-ink-3")} />
         )}
         <X
           size={12}
@@ -132,7 +130,7 @@ function Presence({ tabId }: { tabId: string }) {
       {shown.map((p) => (
         <span
           key={p.clientId}
-          className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-white ring-2 ring-bg"
+          className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-semibold text-others-fg ring-2 ring-bg"
           style={{ background: p.color }}
         >
           {p.name.trim().slice(0, 1).toUpperCase()}
@@ -171,15 +169,13 @@ function CommentsButton({ tabId }: { tabId: string }) {
 export function TabBar() {
   const tabs = useApp((s) => s.tabs);
   const activeId = useApp((s) => s.activeId);
-  const sidebarOpen = useApp((s) => s.sidebarOpen);
   const viewport = useApp((s) => s.viewport);
   const historyOpen = useApp((s) => s.historyOpen);
-  const { activate, toggleSidebar, reload, reveal, openInBrowser, setViewport, setMode, toggleHistory } = useApp.getState();
+  const { activate, reload, reveal, openInBrowser, setViewport, setMode, toggleHistory } = useApp.getState();
   const active = tabs.find((t) => t.id === activeId);
 
   const moreMenu = () =>
     void popupMenu([
-      { text: "Reload", action: () => reload() },
       { text: "Show in Finder", action: reveal },
       { text: "Open in Browser", action: openInBrowser },
       null,
@@ -192,13 +188,8 @@ export function TabBar() {
   return (
     <header
       data-tauri-drag-region
-      className={clsx("flex h-[52px] shrink-0 items-center gap-1 border-b border-line bg-bg pr-2.5", sidebarOpen ? "pl-2" : "pl-[84px]")}
+      className="flex h-[52px] shrink-0 items-center gap-1 border-b border-line bg-bg pl-2 pr-2.5"
     >
-      {!sidebarOpen && (
-        <IconButton label="Show sidebar" shortcut="⌘\" onClick={toggleSidebar} className="mr-1">
-          <PanelLeftOpen size={16} strokeWidth={1.75} />
-        </IconButton>
-      )}
 
       <div role="tablist" className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none]">
         <button
@@ -241,7 +232,7 @@ export function TabBar() {
                 active.share ? "border border-line-strong text-ink hover:bg-hover" : "bg-accent text-accent-fg hover:bg-accent-hover",
               )}
             >
-              {active.share ? <Users size={13.5} strokeWidth={2} /> : <Share2 size={13.5} strokeWidth={2} />}
+              {active.share ? <Users size={13.5} strokeWidth={2} className="text-others-ink" /> : <Share2 size={13.5} strokeWidth={2} />}
               {active.share ? "Shared" : "Share"}
             </button>
           )}
@@ -249,11 +240,6 @@ export function TabBar() {
           <span className="mx-0.5 h-4 w-px bg-line-strong" />
           <Segmented items={VIEWPORTS} value={viewport} onChange={setViewport} />
           {active.share && <CommentsButton tabId={active.id} />}
-          {(!active.share || ["owner", "editor"].includes(active.share.role)) && (
-            <IconButton label="Edit with AI" shortcut="⌘J" onClick={() => void useAi.getState().show()}>
-              <Sparkles size={15} strokeWidth={1.75} />
-            </IconButton>
-          )}
           <IconButton label="Version history" shortcut="⇧⌘H" active={historyOpen} onClick={toggleHistory}>
             <History size={15} strokeWidth={1.75} />
           </IconButton>

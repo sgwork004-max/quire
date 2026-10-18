@@ -22,7 +22,7 @@ function Body({ text, people }: { text: string; people: People }) {
     <p className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-ink [user-select:text]">
       {text.split(re).map((part, i) =>
         part.startsWith("@") && names.includes(part.slice(1)) ? (
-          <span key={i} className="rounded bg-accent-soft px-0.5 font-medium text-accent">
+          <span key={i} className="rounded bg-others-soft px-0.5 font-medium text-others-ink">
             {part}
           </span>
         ) : (
@@ -230,12 +230,12 @@ function ThreadCard({ tab, thread, n, people }: { tab: Tab; thread: Thread; n: n
       onMouseDown={() => !active && focus(tab.id, thread.id)}
       className={clsx(
         "rounded-xl border bg-surface p-3 transition-shadow",
-        active ? "border-accent shadow-[0_0_0_3px_var(--accent-soft)]" : "border-line hover:border-line-strong",
+        active ? "border-others shadow-[0_0_0_3px_var(--others-soft)]" : "border-line hover:border-line-strong",
         thread.resolved && !active && "opacity-70",
       )}
     >
       <div className="mb-2 flex items-center gap-2 text-[11px] text-ink-3">
-        <span className={clsx("flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold text-white", thread.resolved ? "bg-ink-3" : "bg-accent")}>{n}</span>
+        <span className={clsx("flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold", thread.resolved ? "bg-grey-ink text-white" : "bg-others text-others-fg")}>{n}</span>
         <span className="min-w-0 flex-1 truncate">
           {orphaned ? "The element this was on was removed" : thread.anchor ? `${thread.anchor.tag}${thread.anchor.snippet ? ` · “${thread.anchor.snippet}”` : ""}` : "Whole page"}
         </span>
@@ -248,7 +248,7 @@ function ThreadCard({ tab, thread, n, people }: { tab: Tab; thread: Thread; n: n
               e.stopPropagation();
               void resolve(tab.id, thread.id, !thread.resolved);
             }}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-ink-3 hover:bg-hover hover:text-emerald-600"
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-ink-3 hover:bg-hover hover:text-success"
           >
             {thread.resolved ? <RotateCcw size={13} /> : <Check size={14} />}
           </button>

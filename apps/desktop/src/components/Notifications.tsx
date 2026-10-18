@@ -48,7 +48,7 @@ export function NotificationsBell() {
       >
         <Bell size={16} strokeWidth={1.75} />
         {unread > 0 && (
-          <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[9.5px] font-bold text-accent-fg">
+          <span className="absolute right-1.5 top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-others px-1 text-[9.5px] font-bold text-others-fg">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
@@ -84,7 +84,7 @@ export function NotificationsBell() {
                     <span className="mt-0.5 line-clamp-2 block text-[12px] text-ink-2">{n.excerpt}</span>
                     <span className="mt-0.5 block text-[11px] text-ink-3">{relativeTime(n.createdAt)}</span>
                   </span>
-                  {!n.readAt && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" aria-label="Unread" />}
+                  {!n.readAt && <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-others" aria-label="Unread" />}
                 </button>
               </li>
             ))}

@@ -12,7 +12,8 @@
   if (window.parent === window || window.__quireBridge) return;
   window.__quireBridge = true;
 
-  const ACCENT = "#e2513a";
+  const ACCENT = "#3d5588"; // federal blue: your selection
+  const OTHERS = "#ffb511"; // sunflower: comment pins (other people)
   const INLINE = new Set([
     "A", "ABBR", "B", "BR", "CITE", "CODE", "DEL", "EM", "I", "INS", "KBD", "MARK",
     "Q", "S", "SMALL", "SPAN", "STRONG", "SUB", "SUP", "TIME", "U", "VAR",
@@ -26,6 +27,17 @@
   ];
 
   const send = (msg) => window.parent.postMessage({ __quire: true, ...msg }, "*");
+
+  // Tab shortcuts must work while the page has focus: ⌃Tab / ⌃⇧Tab switch
+  // tabs (macOS keeps ⌃Tab from the menu bar), ⌃T opens a new tab.
+  window.addEventListener("keydown", (e) => {
+    if (!e.ctrlKey || e.metaKey || e.altKey) return;
+    const name = e.key === "Tab" ? (e.shiftKey ? "prev-tab" : "next-tab") : e.key.toLowerCase() === "t" && !e.shiftKey ? "new-tab" : null;
+    if (!name) return;
+    e.preventDefault();
+    e.stopPropagation();
+    send({ type: "shortcut", name });
+  }, true);
 
   // ---------------------------------------------------------------- scroll
   const isThumb = window.name === "quire-thumb";
@@ -119,18 +131,18 @@
     root.innerHTML = `
       <style>
         .box{position:fixed;box-sizing:border-box;pointer-events:none;border-radius:2px;display:none}
-        .hover{outline:1px solid ${ACCENT};outline-offset:-1px;background:rgb(226 81 58 / .05)}
-        .hover.gen{outline:1px dashed #a39d97;background:none}
+        .hover{outline:1px solid ${ACCENT};outline-offset:-1px;background:rgb(61 85 136 / .06)}
+        .hover.gen{outline:1px dashed #9aa0aa;background:none}
         .sel{outline:2px solid ${ACCENT};outline-offset:-1px}
-        .sel.editing{outline-width:2px;box-shadow:0 0 0 4px rgb(226 81 58 / .18)}
+        .sel.editing{outline-width:2px;box-shadow:0 0 0 4px rgb(61 85 136 / .2)}
         .label{position:fixed;display:none;font:600 10.5px/1 -apple-system,system-ui,sans-serif;color:#fff;
           background:${ACCENT};padding:3px 5px;border-radius:3px;white-space:nowrap;letter-spacing:.01em}
-        .label.gen{background:#78716c}
+        .label.gen{background:#6b7280}
         .pin{position:fixed;pointer-events:auto;cursor:pointer;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;
-          border-radius:11px 11px 11px 2px;background:${ACCENT};color:#fff;font:700 11px/22px -apple-system,system-ui,sans-serif;
+          border-radius:11px 11px 11px 2px;background:${OTHERS};color:#2b2100;font:700 11px/22px -apple-system,system-ui,sans-serif;
           text-align:center;box-shadow:0 1px 3px rgb(0 0 0/.25),0 0 0 2px #fff;transition:transform .12s}
         .pin:hover,.pin.active{transform:scale(1.15)}
-        .pin.resolved{background:#a39d97}
+        .pin.resolved{background:#9aa0aa;color:#fff}
       </style>
       <div class="box hover"></div><div class="box sel"></div><div class="label"></div><div class="pins"></div>`;
     document.documentElement.appendChild(host);
