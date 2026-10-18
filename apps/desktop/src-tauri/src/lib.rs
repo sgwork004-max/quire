@@ -9,6 +9,7 @@ mod db;
 mod documents;
 mod export;
 mod extract;
+mod inbox;
 mod library;
 mod menu;
 mod protocol;
@@ -73,6 +74,7 @@ pub fn run() {
         .manage(PendingOpens::default())
         .manage(auth::AuthState::default())
         .manage(cloud::Cloud::default())
+        .manage(inbox::Inbox::default())
         .register_asynchronous_uri_scheme_protocol(documents::SCHEME, |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || {
@@ -110,6 +112,7 @@ pub fn run() {
             app.state::<PendingOpens>().push(&handle, cli_paths());
             cloud::start(&handle);
             datasources::start(&handle);
+            inbox::start(&handle);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -172,6 +175,9 @@ pub fn run() {
             datasources::remove_data_source,
             export::print_document,
             export::export_standalone,
+            inbox::inbox_status,
+            inbox::set_inbox_enabled,
+            inbox::import_past_downloads,
             ui_log,
         ])
         .build(tauri::generate_context!())

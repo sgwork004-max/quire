@@ -50,9 +50,25 @@ interface LibraryState {
 
   addFolder: (path?: string) => Promise<void>;
   folderMenu: (location: Location) => void;
+  /** Offer to import HTML already in Downloads (shown once). */
+  inboxBanner: number | null;
   createTag: (name: string) => Promise<number | null>;
   updateTag: (tag: Tag, changes: Partial<Pick<Tag, "name" | "color">>) => Promise<void>;
   tagMenu: (tag: Tag, startRename: () => void) => void;
+}
+
+/** Copies HTML already sitting in ~/Downloads into ~/Quire/Inbox. */
+export async function importPastDownloads() {
+  const toastFn = useApp.getState().toast;
+  try {
+    const n = await ipc.importPastDownloads();
+    toastFn(n ? `Imported ${n} file${n === 1 ? "" : "s"} from Downloads into Quire › Inbox` : "Nothing new to import");
+    savePref("inboxBannerDismissed", true);
+    useLibrary.setState({ inboxBanner: null });
+    void useLibrary.getState().refresh();
+  } catch (e) {
+    toastFn(`Couldn't import: ${errorMessage(e)}`);
+  }
 }
 
 const toast = (m: string, action?: { label: string; run: () => void }) => useApp.getState().toast(m, action);
@@ -81,6 +97,7 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   loaded: false,
   renamingId: null,
   searchFocus: 0,
+  inboxBanner: null,
 
   setView: (view) => {
     set({ view, search: "", renamingId: null });
@@ -292,8 +309,29 @@ export const useLibrary = create<LibraryState>((set, get) => ({
     }
   },
 
-  folderMenu: (location) => {
+  folderMenu: async (location) => {
+    const isQuire = /[\\/]Quire$/.test(location.path);
+    const inbox = isQuire ? await ipc.inboxStatus().catch(() => null) : null;
     void popupMenu([
+      ...(inbox
+        ? [
+            {
+              text: "Import HTML from Downloads",
+              checked: inbox.enabled,
+              action: () =>
+                void ipc
+                  .setInboxEnabled(!inbox.enabled)
+                  .then(() => toast(inbox.enabled ? "Stopped importing from Downloads" : "HTML you download will now appear in Quire"))
+                  .catch(fail("Couldn't change that setting")),
+            },
+            {
+              text: `Import Past Downloads (${inbox.pastCount})…`,
+              enabled: inbox.pastCount > 0,
+              action: () => void importPastDownloads(),
+            },
+            null,
+          ]
+        : []),
       { text: "Show in Finder", action: () => void revealItemInDir(location.path) },
       { text: "Rescan", action: () => void ipc.rescanLocation(location.id).catch(fail("Couldn't rescan")) },
       null,

@@ -148,6 +148,14 @@ export default function App() {
       listen<string>("menu", (e) => MENU_ACTIONS[e.payload]?.()),
       listen<string[]>("open-paths", (e) => void app().openPaths(e.payload)),
       listen("library-changed", () => library().refreshSoon()),
+      listen<{ path: string; name: string; updated: boolean }>("inbox-imported", (e) => {
+        const { path, name, updated } = e.payload;
+        library().refreshSoon();
+        app().toast(updated ? `Updated “${name}” from Downloads` : `New in Inbox: “${name}”`, {
+          label: "Open",
+          run: () => void app().openPaths([path]),
+        });
+      }),
       // Fresh live data: reload any open tab of that page.
       listen<string>("data-refreshed", (e) => {
         for (const t of app().tabs) if (t.path === e.payload) app().reload(t.id);
