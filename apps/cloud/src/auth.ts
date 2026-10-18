@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { bearer, deviceAuthorization, emailOTP } from "better-auth/plugins";
 import { Kysely } from "kysely";
 import { D1Dialect } from "kysely-d1";
-import { DESKTOP_CLIENT_ID, type Env } from "./env";
+import { DESKTOP_CLIENT_ID, googleEnabled, type Env } from "./env";
 import { sendSignInCode } from "./email";
 
 const DAY = 60 * 60 * 24;
@@ -13,10 +13,9 @@ const DAY = 60 * 60 * 24;
  * as a Bearer token. The browser uses cookies.
  */
 export function createAuth(env: Env, baseURL: string) {
-  const google =
-    env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
-      ? { google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET } }
-      : undefined;
+  const google = googleEnabled(env)
+    ? { google: { clientId: env.GOOGLE_CLIENT_ID!, clientSecret: env.GOOGLE_CLIENT_SECRET! } }
+    : undefined;
 
   return betterAuth({
     baseURL,

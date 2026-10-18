@@ -22,7 +22,7 @@ pub fn api_base() -> String {
         .ok()
         .or_else(|| option_env!("QUIRE_API_URL").map(str::to_string))
         .unwrap_or_else(|| {
-            if cfg!(debug_assertions) { "http://localhost:8787" } else { "https://cloud.quire.app" }.to_string()
+            if cfg!(debug_assertions) { "http://localhost:8787" } else { "https://quire-cloud.quire-cloud.workers.dev" }.to_string()
         })
         .trim_end_matches('/')
         .to_string()

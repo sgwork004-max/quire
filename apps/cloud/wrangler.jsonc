@@ -18,8 +18,8 @@
     {
       "binding": "DB",
       "database_name": "quire",
-      // Replaced with the real id by `wrangler d1 create quire` before the first deploy.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      // Self-hosting: replace with the id from `wrangler d1 create quire`.
+      "database_id": "ceaf5ed6-ca5b-469f-806b-534454baf9d5",
       "migrations_dir": "migrations"
     }
   ]

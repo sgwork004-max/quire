@@ -1,10 +1,11 @@
-import type { Env } from "./env";
+import { emailEnabled, type Env } from "./env";
 
 /**
  * Sends a plain-text email through Resend. Without a RESEND_API_KEY (local
  * development) it is printed to the Worker console instead.
  */
 async function send(env: Env, to: string, subject: string, text: string): Promise<void> {
+  if (!emailEnabled(env)) return; // no email service configured: skip silently
   if (!env.RESEND_API_KEY) {
     console.log(`[dev] Email to ${to}: ${subject}\n${text}`);
     return;
@@ -31,6 +32,7 @@ export async function sendInvite(env: Env, opts: { to: string; from: string; tit
 }
 
 export async function sendSignInCode(env: Env, email: string, code: string): Promise<void> {
+  if (!emailEnabled(env)) throw new Error("Email sign-in isn't available. Continue with Google.");
   if (!env.RESEND_API_KEY) console.log(`[dev] Sign-in code for ${email}: ${code}`);
   else
     await send(

@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
 import { createAuth, type Auth } from "./auth";
-import type { Env } from "./env";
+import { emailEnabled, googleEnabled, type Env } from "./env";
 import { devicePage } from "./pages";
 import { live, sharing } from "./sharing";
 
@@ -37,7 +37,7 @@ app.get("/", (c) => c.json({ name: "Quire Cloud", ok: true }));
 app.on(["GET", "POST"], "/api/auth/*", (c) => c.get("auth").handler(c.req.raw));
 
 app.get("/device", (c) =>
-  c.html(devicePage({ userCode: c.req.query("user_code") ?? "", google: Boolean(c.env.GOOGLE_CLIENT_ID) })),
+  c.html(devicePage({ userCode: c.req.query("user_code") ?? "", google: googleEnabled(c.env), email: emailEnabled(c.env) })),
 );
 
 // ---------------------------------------------------------------- profile

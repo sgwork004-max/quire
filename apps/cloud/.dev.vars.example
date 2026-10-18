@@ -1,5 +1,7 @@
 # Copy to .dev.vars for `wrangler dev`. Never commit .dev.vars.
 BETTER_AUTH_SECRET=change-me-to-32-random-characters
+# Print sign-in codes and invite emails to the console instead of sending them.
+DEV_EMAIL_TO_CONSOLE=1
 # Optional. Without these, Google sign-in is hidden and email codes are printed to the console.
 # GOOGLE_CLIENT_ID=
 # GOOGLE_CLIENT_SECRET=

@@ -37,7 +37,7 @@ const LOGO = `<svg class="logo" viewBox="0 0 20 20" fill="none"><rect x="7" y="1
  * (Google or an emailed code) and then asks them to approve the code shown in
  * the app. Approving creates the session the app receives.
  */
-export function devicePage(opts: { userCode: string; google: boolean }): string {
+export function devicePage(opts: { userCode: string; google: boolean; email: boolean }): string {
   const code = escape(opts.userCode);
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Sign in to Quire</title><style>${STYLE}</style></head><body><main class="card">${LOGO}
@@ -52,8 +52,10 @@ export function devicePage(opts: { userCode: string; google: boolean }): string 
 
 <section id="sign-in" class="hidden">
   <h1>Sign in to Quire</h1><p>Use the account you want on this Mac.</p>
-  ${opts.google ? `<button id="google" class="secondary">Continue with Google</button><div class="or">or</div>` : ""}
-  <form id="email-form"><label for="email">Email</label><input id="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+  ${opts.google ? `<button id="google" class="${opts.email ? "secondary" : "primary"}">Continue with Google</button>` : ""}
+  ${opts.google && opts.email ? `<div class="or">or</div>` : ""}
+  ${!opts.google && !opts.email ? `<p>Sign-in isn't set up on this server yet.</p>` : ""}
+  <form id="email-form" class="${opts.email ? "" : "hidden"}"><label for="email">Email</label><input id="email" type="email" autocomplete="email" placeholder="you@company.com" required>
   <button class="primary">Email me a code</button></form>
   <form id="otp-form" class="hidden"><p id="otp-hint"></p><label for="otp">6-digit code</label>
   <input id="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="6" required>
