@@ -71,7 +71,26 @@ export interface VersionMeta {
   sizeBytes: number;
 }
 
+export interface Account {
+  id: string;
+  name: string;
+  email: string;
+  image: string | null;
+}
+
+export interface SignInStart {
+  userCode: string;
+  verificationUrl: string;
+  expiresIn: number;
+}
+
 export const ipc = {
+  // account
+  account: () => invoke<Account | null>("account"),
+  updateProfile: (name: string) => invoke<Account | null>("update_profile", { name }),
+  startSignIn: () => invoke<SignInStart>("start_sign_in"),
+  cancelSignIn: () => invoke<void>("cancel_sign_in"),
+  signOut: () => invoke<void>("sign_out"),
   // documents
   openDocument: (path: string) => invoke<DocumentInfo>("open_document", { path }),
   closeDocument: (id: string) => invoke<void>("close_document", { id }),

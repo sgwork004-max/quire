@@ -9,6 +9,7 @@
     "core:window:allow-start-dragging",
     "dialog:allow-open",
     "store:default",
-    "opener:allow-reveal-item-in-dir"
+    "opener:allow-reveal-item-in-dir",
+    "opener:allow-open-url"
   ]
 }

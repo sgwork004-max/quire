@@ -1,0 +1,7 @@
+# Copy to .dev.vars for `wrangler dev`. Never commit .dev.vars.
+BETTER_AUTH_SECRET=change-me-to-32-random-characters
+# Optional. Without these, Google sign-in is hidden and email codes are printed to the console.
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+# RESEND_API_KEY=
+# EMAIL_FROM=Quire <signin@yourdomain.com>

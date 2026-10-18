@@ -7,6 +7,7 @@
     "dev": "pnpm --filter @quire/desktop tauri dev",
     "build": "pnpm --filter @quire/desktop tauri build",
     "typecheck": "pnpm -r typecheck",
-    "check": "pnpm typecheck && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml"
+    "check": "pnpm typecheck && cargo check --manifest-path apps/desktop/src-tauri/Cargo.toml",
+    "dev:cloud": "pnpm --filter @quire/cloud dev"
   }
 }

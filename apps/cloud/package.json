@@ -1,0 +1,26 @@
+{
+  "name": "@quire/cloud",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply quire --local",
+    "db:migrate:remote": "wrangler d1 migrations apply quire --remote"
+  },
+  "dependencies": {
+    "better-auth": "^1.7.10",
+    "hono": "^4.13.13",
+    "kysely": "^0.29.6",
+    "kysely-d1": "^0.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261016.1",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3",
+    "wrangler": "^4.151.1"
+  }
+}

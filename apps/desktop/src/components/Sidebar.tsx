@@ -6,7 +6,7 @@ import { useLibrary, type LibraryView } from "../store/library";
 import { popupMenu } from "../lib/menu";
 import type { Tag } from "../lib/ipc";
 import { IconButton } from "./IconButton";
-import { Logo } from "./Logo";
+import { AccountButton } from "./Account";
 
 const same = (a: LibraryView, b: LibraryView) =>
   a.kind === b.kind && ("id" in a ? a.id : null) === ("id" in b ? b.id : null);
@@ -90,10 +90,8 @@ export function Sidebar() {
 
       <div className="border-t border-line px-2 py-2">
         <NavItem icon={<Trash2 size={15} strokeWidth={1.75} />} label="Trash" count={overview?.trash || undefined} active={isActive({ kind: "trash" })} onClick={() => setView({ kind: "trash" })} />
-        <div className="flex items-center gap-2 px-2 pt-2 text-ink-2">
-          <Logo size={14} />
-          <span className="text-[11.5px] font-semibold tracking-tight text-ink">Quire</span>
-          <span className="ml-auto text-[11px] text-ink-3">v0.2</span>
+        <div className="mt-1 border-t border-line pt-1">
+          <AccountButton />
         </div>
       </div>
     </aside>

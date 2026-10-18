@@ -7,3 +7,5 @@ target/
 .env.*
 !.env.example
 apps/desktop/src-tauri/gen/
+.dev.vars
+.wrangler/

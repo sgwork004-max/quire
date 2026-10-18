@@ -4,6 +4,8 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { activeTab, HOME, useApp, type Mode, type Viewport } from "./store/app";
 import { useLibrary, type Layout } from "./store/library";
+import { useAccount } from "./store/account";
+import type { Account } from "./lib/ipc";
 import { ipc, isHtmlPath, type SortKey } from "./lib/ipc";
 import { loadPref } from "./lib/prefs";
 import { flushAll, getSession } from "./editor/session";
@@ -15,6 +17,7 @@ import { DocView } from "./components/doc/DocView";
 import { LibraryView } from "./components/library/LibraryView";
 import { DropOverlay } from "./components/DropOverlay";
 import { Toasts } from "./components/Toasts";
+import { SignInDialog } from "./components/Account";
 
 const app = () => useApp.getState();
 const library = () => useLibrary.getState();
@@ -101,6 +104,8 @@ export default function App() {
       listen<string>("menu", (e) => MENU_ACTIONS[e.payload]?.()),
       listen<string[]>("open-paths", (e) => void app().openPaths(e.payload)),
       listen("library-changed", () => library().refreshSoon()),
+      listen<Account | null>("auth-changed", (e) => useAccount.getState().signedIn(e.payload)),
+      listen<string>("auth-failed", (e) => useAccount.getState().failed(e.payload)),
       listen<{ id: string; doc: boolean }>("document-changed", (e) => {
         const { id, doc } = e.payload;
         // Editors and AI tools often write a file in several bursts; settle first.
@@ -135,6 +140,7 @@ export default function App() {
     void Promise.all(unlisten)
       .then(restorePrefs)
       .then(() => library().refresh())
+      .then(() => void useAccount.getState().load())
       .then(() => ipc.takePendingOpens())
       .then((paths) => (paths.length ? app().openPaths(paths) : undefined));
 
@@ -157,6 +163,7 @@ export default function App() {
         ))}
       </main>
       {dragging && <DropOverlay />}
+      <SignInDialog />
       <Toasts />
     </div>
   );

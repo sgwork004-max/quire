@@ -1,3 +1,4 @@
+mod auth;
 mod browser;
 mod commands;
 mod db;
@@ -41,6 +42,12 @@ impl PendingOpens {
     }
 }
 
+/// UI errors forwarded by public/diagnostics.js.
+#[tauri::command]
+fn ui_log(message: String) {
+    eprintln!("[ui] {message}");
+}
+
 fn cli_paths() -> Vec<String> {
     std::env::args()
         .skip(1)
@@ -59,6 +66,7 @@ pub fn run() {
         .manage(watcher::Watchers::default())
         .manage(scan::LocationWatchers::default())
         .manage(PendingOpens::default())
+        .manage(auth::AuthState::default())
         .register_asynchronous_uri_scheme_protocol(documents::SCHEME, |ctx, request, responder| {
             let app = ctx.app_handle().clone();
             std::thread::spawn(move || {
@@ -115,6 +123,12 @@ pub fn run() {
             commands::version_content,
             commands::preview_version,
             commands::restore_version,
+            auth::account,
+            auth::update_profile,
+            auth::start_sign_in,
+            auth::cancel_sign_in,
+            auth::sign_out,
+            ui_log,
         ])
         .build(tauri::generate_context!())
         .expect("error while building Quire");
