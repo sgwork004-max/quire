@@ -14,7 +14,10 @@ use tauri::{AppHandle, Emitter, Manager};
 
 const CLIENT_ID: &str = "quire-desktop";
 const KEYCHAIN_SERVICE: &str = "app.quire.desktop";
+/// Keychain account for the default (production) server. Other servers, like a
+/// local dev server, get their own entry so testing never touches your real sign-in.
 const KEYCHAIN_ACCOUNT: &str = "session";
+const PRODUCTION_API: &str = "https://quire-cloud.quire-cloud.workers.dev";
 
 /// Cloud API base URL. Override with QUIRE_API_URL at runtime or build time.
 pub fn api_base() -> String {
@@ -22,7 +25,7 @@ pub fn api_base() -> String {
         .ok()
         .or_else(|| option_env!("QUIRE_API_URL").map(str::to_string))
         .unwrap_or_else(|| {
-            if cfg!(debug_assertions) { "http://localhost:8787" } else { "https://quire-cloud.quire-cloud.workers.dev" }.to_string()
+            if cfg!(debug_assertions) { "http://localhost:8787" } else { PRODUCTION_API }.to_string()
         })
         .trim_end_matches('/')
         .to_string()
@@ -87,7 +90,9 @@ impl Default for AuthState {
 }
 
 fn keychain() -> Result<keyring::Entry, String> {
-    keyring::Entry::new(KEYCHAIN_SERVICE, KEYCHAIN_ACCOUNT).map_err(|e| e.to_string())
+    let base = api_base();
+    let account = if base == PRODUCTION_API { KEYCHAIN_ACCOUNT.to_string() } else { format!("{KEYCHAIN_ACCOUNT}:{base}") };
+    keyring::Entry::new(KEYCHAIN_SERVICE, &account).map_err(|e| e.to_string())
 }
 
 impl AuthState {

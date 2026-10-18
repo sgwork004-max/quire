@@ -8,6 +8,7 @@ import { popupMenu } from "../lib/menu";
 import type { Tag } from "../lib/ipc";
 import { IconButton } from "./IconButton";
 import { AccountButton } from "./Account";
+import { NotificationsBell } from "./Notifications";
 
 const same = (a: LibraryView, b: LibraryView) =>
   a.kind === b.kind && ("id" in a ? a.id : null) === ("id" in b ? b.id : null);
@@ -93,8 +94,11 @@ export function Sidebar() {
 
       <div className="border-t border-line px-2 py-2">
         <NavItem icon={<Trash2 size={15} strokeWidth={1.75} />} label="Trash" count={overview?.trash || undefined} active={isActive({ kind: "trash" })} onClick={() => setView({ kind: "trash" })} />
-        <div className="mt-1 border-t border-line pt-1">
-          <AccountButton />
+        <div className="mt-1 flex items-center gap-1 border-t border-line pt-1">
+          <div className="min-w-0 flex-1">
+            <AccountButton />
+          </div>
+          <NotificationsBell />
         </div>
       </div>
     </aside>

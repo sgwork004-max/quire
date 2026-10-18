@@ -1,5 +1,7 @@
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
+import * as decoding from "lib0/decoding";
+import { useComments } from "../store/comments";
 import { errorMessage, ipc, type ShareRole } from "../lib/ipc";
 import { useApp, type Peer } from "../store/app";
 import { useAccount } from "../store/account";
@@ -60,6 +62,10 @@ export async function startLive(tabId: string) {
     });
     const conn: LiveConnection = { documentId: link.documentId, role: ticket.role, doc, provider };
     connections.set(tabId, conn);
+    // Quire extension to the protocol: one-word events from the room.
+    provider.messageHandlers[2] = (_encoder, decoder) => {
+      if (decoding.readVarString(decoder) === "comments") void useComments.getState().load(tabId);
+    };
 
     provider.awareness.setLocalStateField("user", {
       name: account.name,
@@ -82,6 +88,8 @@ export async function startLive(tabId: string) {
       const undoManager = canEdit(ticket.role) ? new Y.UndoManager(text) : null;
       session.bindLive({ text, awareness: provider.awareness, undoManager, readOnly: !canEdit(ticket.role) });
       void ipc.setLive(link.documentId, true);
+      // Shared files always preview the live text (annotated, so comments can pin to elements).
+      void session.setLive(true).then(() => useComments.getState().load(tabId));
     });
 
     // 44xx closes are permanent: access was removed or sharing stopped.

@@ -5,6 +5,7 @@ import { createAuth, type Auth } from "./auth";
 import { emailEnabled, googleEnabled, type Env } from "./env";
 import { devicePage } from "./pages";
 import { live, sharing } from "./sharing";
+import { comments, notifications } from "./comments";
 
 export { DocRoom } from "./room";
 
@@ -65,7 +66,11 @@ app.patch("/api/me", requireUser, async (c) => {
 
 app.use("/api/documents/*", requireUser);
 app.use("/api/documents", requireUser);
+app.route("/api/documents", comments);
 app.route("/api/documents", sharing);
+app.use("/api/notifications/*", requireUser);
+app.use("/api/notifications", requireUser);
+app.route("/api/notifications", notifications);
 app.get("/live/:id", live);
 
 export default app;

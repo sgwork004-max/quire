@@ -6,6 +6,8 @@
 //   2. powers Visual mode: hover/select outlines, inline text editing and
 //      live style/attribute previews. Elements are identified by `data-qid`,
 //      which Quire adds to its in-memory copy of the source when editing.
+//   3. powers comments: a "comment" mode that selects elements without
+//      editing them, and numbered pins on elements that have comments.
 (() => {
   if (window.parent === window || window.__quireBridge) return;
   window.__quireBridge = true;
@@ -48,7 +50,9 @@
   }
 
   // ---------------------------------------------------------------- visual mode
-  let visual = false;
+  let visual = false; // selecting elements (Visual or comment mode)
+  let commentOnly = false; // comment mode: select, never edit
+  let pins = []; // [{ id, qid, n, resolved, active }]
   let hovered = null;
   let selected = null;
   let editing = null;
@@ -122,14 +126,20 @@
         .label{position:fixed;display:none;font:600 10.5px/1 -apple-system,system-ui,sans-serif;color:#fff;
           background:${ACCENT};padding:3px 5px;border-radius:3px;white-space:nowrap;letter-spacing:.01em}
         .label.gen{background:#78716c}
+        .pin{position:fixed;pointer-events:auto;cursor:pointer;min-width:22px;height:22px;padding:0 6px;box-sizing:border-box;
+          border-radius:11px 11px 11px 2px;background:${ACCENT};color:#fff;font:700 11px/22px -apple-system,system-ui,sans-serif;
+          text-align:center;box-shadow:0 1px 3px rgb(0 0 0/.25),0 0 0 2px #fff;transition:transform .12s}
+        .pin:hover,.pin.active{transform:scale(1.15)}
+        .pin.resolved{background:#a39d97}
       </style>
-      <div class="box hover"></div><div class="box sel"></div><div class="label"></div>`;
+      <div class="box hover"></div><div class="box sel"></div><div class="label"></div><div class="pins"></div>`;
     document.documentElement.appendChild(host);
     overlay = {
       host,
       hover: root.querySelector(".hover"),
       sel: root.querySelector(".sel"),
       label: root.querySelector(".label"),
+      pins: root.querySelector(".pins"),
     };
     return overlay;
   }
@@ -141,16 +151,50 @@
     return r;
   }
 
+  function renderPins(o) {
+    const nodes = o.pins.children;
+    pins.forEach((p, i) => {
+      let node = nodes[i];
+      if (!node) {
+        node = document.createElement("div");
+        node.className = "pin";
+        node.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          send({ type: "pin", id: node.dataset.id });
+        });
+        o.pins.appendChild(node);
+      }
+      const el = byQid(p.qid);
+      if (!el) { node.style.display = "none"; return; }
+      const r = el.getBoundingClientRect();
+      node.dataset.id = p.id;
+      node.textContent = String(p.n);
+      node.className = "pin" + (p.resolved ? " resolved" : "") + (p.active ? " active" : "");
+      node.style.display = r.bottom < 0 || r.top > innerHeight ? "none" : "block";
+      node.style.left = Math.min(innerWidth - 26, Math.max(2, r.right - 11)) + "px";
+      node.style.top = Math.max(2, r.top - 11) + "px";
+    });
+    while (nodes.length > pins.length) nodes[nodes.length - 1].remove();
+  }
+
   function frame() {
-    if (!visual) return;
+    if (!visual && !pins.length) return;
     const o = ensureOverlay();
+    renderPins(o);
+    if (!visual) {
+      o.hover.style.display = o.sel.style.display = o.label.style.display = "none";
+      raf = requestAnimationFrame(frame);
+      return;
+    }
     place(o.hover, hovered && hovered !== selected ? hovered : null);
     o.hover.classList.toggle("gen", !!hovered && qidOf(hovered) === null);
     const r = place(o.sel, selected);
     o.sel.classList.toggle("editing", !!editing);
     if (r) {
       const gen = qidOf(selected) === null;
-      o.label.textContent = selected.tagName.toLowerCase() + (gen ? " · made by a script" : editing ? " · editing" : "");
+      const tag = selected.tagName.toLowerCase();
+      o.label.textContent = commentOnly ? `Comment on ${tag}` : tag + (gen ? " · made by a script" : editing ? " · editing" : "");
       o.label.classList.toggle("gen", gen);
       o.label.style.display = "block";
       o.label.style.left = Math.max(2, r.left) + "px";
@@ -204,6 +248,9 @@
     if (selected === el) send({ type: "selected", info: describe(el) });
   }
 
+  /** True for events on Quire's own overlay (pins), which pages never see. */
+  const onOverlay = (e) => overlay && e.composedPath().includes(overlay.host);
+
   const pick = (target) => {
     let el = target instanceof Element ? target : target && target.parentElement;
     if (!el || el === document.documentElement) return null;
@@ -218,10 +265,12 @@
     },
     mouseleave() { hovered = null; },
     mousedown(e) {
+      if (onOverlay(e)) return;
       if (editing && editing.contains(e.target)) return;
       e.preventDefault();
     },
     click(e) {
+      if (onOverlay(e)) return;
       if (editing && editing.contains(e.target)) return;
       e.preventDefault();
       e.stopPropagation();
@@ -229,6 +278,7 @@
       if (el) select(el);
     },
     dblclick(e) {
+      if (commentOnly) return;
       if (editing && editing.contains(e.target)) return;
       e.preventDefault();
       e.stopPropagation();
@@ -246,6 +296,7 @@
         return;
       }
       if (e.key === "Escape") { select(null); }
+      else if (commentOnly) { /* comment mode never edits */ }
       else if ((e.key === "Backspace" || e.key === "Delete") && selected && qidOf(selected) !== null) {
         e.preventDefault();
         send({ type: "delete", qid: qidOf(selected) });
@@ -267,7 +318,8 @@
     },
   };
 
-  function setVisual(on) {
+  function setVisual(on, onlyComments) {
+    commentOnly = !!onlyComments;
     if (on === visual) return;
     visual = on;
     for (const [name, fn] of Object.entries(handlers)) {
@@ -277,14 +329,18 @@
       pageStyle = document.createElement("style");
       pageStyle.textContent = "[contenteditable]{outline:none!important;cursor:text!important}*{cursor:default}";
       document.documentElement.appendChild(pageStyle);
+      cancelAnimationFrame(raf);
       raf = requestAnimationFrame(frame);
     } else {
       stopEditing(true);
-      cancelAnimationFrame(raf);
       hovered = selected = null;
       pageStyle && pageStyle.remove();
-      overlay && overlay.host.remove();
-      overlay = pageStyle = null;
+      pageStyle = null;
+      if (!pins.length) {
+        cancelAnimationFrame(raf);
+        overlay && overlay.host.remove();
+        overlay = null;
+      }
     }
   }
 
@@ -294,8 +350,20 @@
     const m = e.data;
     switch (m.type) {
       case "mode":
-        setVisual(m.mode === "visual");
+        setVisual(m.mode === "visual" || m.mode === "comment", m.mode === "comment");
         break;
+      case "pins": {
+        const had = pins.length;
+        pins = Array.isArray(m.pins) ? m.pins : [];
+        if (!pins.length && !visual && overlay) {
+          cancelAnimationFrame(raf);
+          overlay.host.remove();
+          overlay = null;
+        } else if (pins.length && !had && !visual) {
+          raf = requestAnimationFrame(frame);
+        }
+        break;
+      }
       case "select": {
         const el = m.qid == null ? null : byQid(m.qid);
         select(el);

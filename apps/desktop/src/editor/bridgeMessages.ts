@@ -2,6 +2,7 @@ import { useApp, type ElementInfo } from "../store/app";
 import { onFrameReady } from "../components/doc/DocView";
 import { frameIdFor } from "./frames";
 import { getSession } from "./session";
+import { useComments } from "../store/comments";
 
 type BridgeMessage =
   | { type: "ready"; count: number }
@@ -11,7 +12,8 @@ type BridgeMessage =
   | { type: "delete"; qid: number }
   | { type: "undo-parent" }
   | { type: "redo-parent" }
-  | { type: "editing"; on: boolean };
+  | { type: "editing"; on: boolean }
+  | { type: "pin"; id: string };
 
 /**
  * Handles messages from the bridge script inside a preview. Only messages
@@ -28,6 +30,17 @@ export function handleBridgeMessage(e: MessageEvent) {
 
   if (msg.type === "ready") {
     onFrameReady(id);
+    return;
+  }
+  const comments = useComments.getState();
+  if (msg.type === "pin") {
+    comments.togglePanel(true);
+    comments.focus(id, msg.id);
+    return;
+  }
+  if (msg.type === "selected" && comments.picking[id]) {
+    if (msg.info) comments.draftFromSelection(id, msg.info);
+    else comments.stopPick(id); // Esc
     return;
   }
   // Everything below is editing, which only exists in Visual mode.

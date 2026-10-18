@@ -18,6 +18,8 @@ import {
   X,
 } from "lucide-react";
 import { useCloud } from "../store/cloud";
+import { useComments } from "../store/comments";
+import { MessageSquare } from "lucide-react";
 import { HOME, useApp, type Mode, type Tab, type Viewport } from "../store/app";
 import { popupMenu } from "../lib/menu";
 import { IconButton } from "./IconButton";
@@ -143,6 +145,27 @@ function Presence({ tabId }: { tabId: string }) {
   );
 }
 
+function CommentsButton({ tabId }: { tabId: string }) {
+  const open = useComments((s) => s.panelOpen);
+  const count = useComments((s) => s.byTab[tabId]?.threads.filter((t) => !t.resolved).length ?? 0);
+  return (
+    <button
+      type="button"
+      aria-label="Comments"
+      aria-pressed={open}
+      title="Comments  ⇧⌘M"
+      onClick={() => useComments.getState().togglePanel()}
+      className={clsx(
+        "relative flex h-7 items-center gap-1 rounded-md px-1.5 text-ink-2 transition-colors hover:bg-hover hover:text-ink",
+        open && "bg-active text-ink",
+      )}
+    >
+      <MessageSquare size={15} strokeWidth={1.75} />
+      {count > 0 && <span className="text-[11.5px] font-semibold tabular-nums">{count}</span>}
+    </button>
+  );
+}
+
 export function TabBar() {
   const tabs = useApp((s) => s.tabs);
   const activeId = useApp((s) => s.activeId);
@@ -218,6 +241,7 @@ export function TabBar() {
           <Segmented items={MODES} value={active.mode} onChange={(m) => void setMode(active.id, m)} labels />
           <span className="mx-0.5 h-4 w-px bg-line-strong" />
           <Segmented items={VIEWPORTS} value={viewport} onChange={setViewport} />
+          {active.share && <CommentsButton tabId={active.id} />}
           <IconButton label="Version history" shortcut="⇧⌘H" active={historyOpen} onClick={toggleHistory}>
             <History size={15} strokeWidth={1.75} />
           </IconButton>

@@ -57,6 +57,8 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .item(&item("mode-visual", "Visual Editor", "CmdOrCtrl+Alt+2")?)
         .item(&item("mode-code", "Code Editor", "CmdOrCtrl+Alt+3")?)
         .item(&item("history", "Version History", "CmdOrCtrl+Shift+H")?)
+        .item(&item("comments", "Comments", "CmdOrCtrl+Shift+M")?)
+        .item(&item("new-comment", "Add Comment", "CmdOrCtrl+Alt+M")?)
         .separator()
         .item(&item("reload", "Reload", "CmdOrCtrl+R")?)
         .item(&item("toggle-sidebar", "Toggle Sidebar", "CmdOrCtrl+\\")?)

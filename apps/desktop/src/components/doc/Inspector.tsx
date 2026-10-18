@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { useEffect, useState, type ReactNode } from "react";
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Code2, Copy, ImageUp, MousePointerClick, Trash2, Type } from "lucide-react";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Code2, Copy, ImageUp, MessageSquarePlus, MousePointerClick, Trash2, Type } from "lucide-react";
+import { useComments } from "../../store/comments";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useApp, type ElementInfo, type Tab } from "../../store/app";
 import { getSession } from "../../editor/session";
@@ -171,6 +172,7 @@ function ElementPanel({ tab, info }: { tab: Tab; info: ElementInfo }) {
       <div className="mt-1 flex gap-1.5 px-4">
         <ActionButton icon={<Copy size={13.5} />} label="Duplicate" onClick={() => session?.duplicate(qid)} />
         <ActionButton icon={<Code2 size={13.5} />} label="Code" onClick={() => void showInCode()} />
+        {tab.share && <ActionButton icon={<MessageSquarePlus size={13.5} />} label="Comment" onClick={() => useComments.getState().draftFromSelection(tab.id, info)} />}
         <ActionButton icon={<Trash2 size={13.5} />} label="Delete" danger onClick={() => session?.remove(qid)} />
       </div>
     </div>

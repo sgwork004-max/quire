@@ -40,7 +40,7 @@ const bytes = (s: string) => new TextEncoder().encode(s).length;
 const fail = (c: C, status: 400 | 403 | 404 | 409 | 413, error: string) => c.json({ error }, status);
 
 /** The caller's role on a document, or null if they have no access. */
-async function roleFor(env: Env, documentId: string, u: User): Promise<{ doc: DocumentRow; role: Role } | null> {
+export async function roleFor(env: Env, documentId: string, u: User): Promise<{ doc: DocumentRow; role: Role } | null> {
   const doc = await env.DB.prepare("SELECT * FROM document WHERE id = ?").bind(documentId).first<DocumentRow>();
   if (!doc) return null;
   if (doc.ownerId === u.id) return { doc, role: "owner" };
@@ -155,14 +155,15 @@ sharing.delete("/:id", async (c) => {
   const access = await roleFor(c.env, c.req.param("id"), user(c));
   if (!access) return fail(c, 404, "Not found");
   if (access.role !== "owner") return fail(c, 403, "Only the owner can stop sharing");
-  await room(c, access.doc.id).destroy();
-  await c.env.DB.prepare("DELETE FROM document WHERE id = ?").bind(access.doc.id).run();
-  // Blobs no other document uses are removed. Content addressing makes this safe.
+  // Blobs no other document uses are removed. Content addressing makes this
+  // safe; find them before the delete cascades away this document's assets.
   const { results } = await c.env.DB.prepare(
     "SELECT hash FROM asset WHERE documentId = ? EXCEPT SELECT hash FROM asset WHERE documentId != ?",
   )
     .bind(access.doc.id, access.doc.id)
     .all<{ hash: string }>();
+  await room(c, access.doc.id).destroy();
+  await c.env.DB.prepare("DELETE FROM document WHERE id = ?").bind(access.doc.id).run();
   if (results.length) await c.env.BLOBS.delete(results.map((r) => `blobs/${r.hash}`));
   return c.json({ ok: true });
 });

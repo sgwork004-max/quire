@@ -6,6 +6,7 @@ import { startLive, stopLive } from "../editor/live";
 import { savePref } from "../lib/prefs";
 import { closeSession, ensureSession, getSession } from "../editor/session";
 import { postToFrame } from "../editor/frames";
+import { frameMode } from "./comments";
 
 export const HOME = "home";
 
@@ -168,7 +169,8 @@ export const useApp = create<AppState>((set, get) => ({
       const session = getSession(id);
       if (session) {
         await session.flush();
-        await session.setLive(false);
+        // Shared files keep previewing the live text; private files go back to disk.
+        if (!session.isLive) await session.setLive(false);
       }
       set((s) => ({ selection: { ...s.selection, [id]: null } }));
     } else {
@@ -181,7 +183,7 @@ export const useApp = create<AppState>((set, get) => ({
       }
     }
     set((s) => ({ tabs: s.tabs.map((t) => (t.id === id ? { ...t, mode } : t)) }));
-    postToFrame(id, { type: "mode", mode });
+    postToFrame(id, { type: "mode", mode: frameMode(id) });
   },
 
   reload: (id) => {

@@ -49,6 +49,13 @@ Desktop app (Tauri)                         Quire Cloud (Cloudflare)
 - The object checks the caller's role on connect: viewers and commenters get read-only sync; editors can write.
 - The owner's desktop applies remote edits to the file on disk; local edits (including from other apps or AI tools) are diffed into the Yjs document.
 
+## Comments (Phase 5, done)
+
+- Comments live in D1 (`comment`, `notification`) and exist only on shared documents. Viewers can read them; commenters, editors and owners can write. Authors edit and delete their own; owners can delete any.
+- A thread is pinned to an element by a **Yjs relative position** at the start of the element's tag, so it keeps pointing at the same element while anyone edits text before it. If the element is deleted, the thread stays and says so.
+- When comments change, the room broadcasts a one-word event (`comments`) over the live connection (message type 2) and every open copy reloads its threads.
+- Notifications are created for mentions (only of people on the file), replies to threads you're in, and new comments on your files. The desktop polls them with its sync loop.
+
 ## How sync works on the desktop
 
 - `cloud_links` (desktop SQLite) links a local file to a cloud document: the owner's original, or for recipients a copy in `~/Library/Application Support/app.quire.desktop/shared/<id>/`. Recipient copies are deleted on sign-out.

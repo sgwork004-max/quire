@@ -1,5 +1,5 @@
 import { Annotation, Compartment, EditorState, Transaction } from "@codemirror/state";
-import type * as Y from "yjs";
+import * as Y from "yjs";
 import { yCollab } from "y-codemirror.next";
 import {
   EditorView,
@@ -323,6 +323,37 @@ export class EditorSession {
     return this.withElement(qid, (el, src) => this.apply(duplicateElement(src, el), "reload", "input.visual.duplicate"));
   }
 
+  // ------------------------------------------------------------ comment anchors
+
+  /**
+   * A durable pointer to an element for a comment: a Yjs relative position at
+   * the start of its tag, which keeps pointing at the same element while
+   * anyone edits text before it. Only available in shared (live) documents.
+   */
+  anchorFor(qid: number): CommentAnchor | null {
+    const el = this.element(qid);
+    if (!el || !this.liveBinding) return null;
+    const rel = Y.createRelativePositionFromTypeIndex(this.liveBinding.text, el.start);
+    const inner = this.text.slice(el.startTagEnd, el.innerEnd ?? el.startTagEnd);
+    const snippet = inner.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+    return { pos: toBase64(Y.encodeRelativePosition(rel)), tag: el.tag, snippet };
+  }
+
+  /** The element (qid in the current preview) a comment points at, or null if it was removed. */
+  qidForAnchor(anchor: CommentAnchor): number | null {
+    if (!this.liveBinding || !this.served || this.served.source !== this.text) return null;
+    const doc = this.liveBinding.text.doc;
+    if (!doc) return null;
+    try {
+      const rel = Y.decodeRelativePosition(fromBase64(anchor.pos));
+      const abs = Y.createAbsolutePositionFromRelativePosition(rel, doc);
+      if (!abs) return null;
+      return this.served.map.find((m) => m.start === abs.index)?.qid ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   /** Puts the code cursor on an element (used when switching Visual -> Code). */
   revealElement(qid: number) {
     const el = this.element(qid);
@@ -337,6 +368,15 @@ export class EditorSession {
     this.view.destroy();
   }
 }
+
+export interface CommentAnchor {
+  pos: string;
+  tag: string;
+  snippet: string;
+}
+
+const toBase64 = (bytes: Uint8Array) => btoa(String.fromCharCode(...bytes));
+const fromBase64 = (s: string) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 const sessions = new Map<string, EditorSession>();
 

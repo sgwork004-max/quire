@@ -61,9 +61,12 @@ async function connect(token, docId) {
   const ws = new WebSocket(`${t.url}?ticket=${encodeURIComponent(t.ticket)}`);
   ws.binaryType = "arraybuffer";
   let synced = false;
+  const events = [];
   ws.onmessage = (e) => {
     const dec = decoding.createDecoder(new Uint8Array(e.data));
-    if (decoding.readVarUint(dec) !== 0) return;
+    const kind = decoding.readVarUint(dec);
+    if (kind === 2) events.push(decoding.readVarString(dec));
+    if (kind !== 0) return;
     const enc = encoding.createEncoder();
     encoding.writeVarUint(enc, 0);
     const type = syncProtocol.readSyncMessage(dec, enc, doc, "remote");
@@ -83,7 +86,7 @@ async function connect(token, docId) {
   syncProtocol.writeSyncStep1(enc, doc);
   ws.send(encoding.toUint8Array(enc));
   for (let i = 0; i < 50 && !synced; i++) await sleep(50);
-  return { doc, ws, text: doc.getText("html"), role: t.role };
+  return { doc, ws, text: doc.getText("html"), role: t.role, events };
 }
 
 const owner = await signIn(`owner-${Date.now()}@example.com`);
@@ -150,6 +153,38 @@ const server = (await json(`/api/documents/${id}/content`, { token: owner })).da
 check("viewer's live edit is dropped by the server", !server.includes("hacked") && server.includes("live"));
 check("forged ticket rejected", (await fetch(`${BASE}/live/${id}?ticket=abc.def`)).status === 401);
 
+// Comments
+const anchor = { pos: "AQ==", tag: "h1", snippet: "Sales" };
+check("viewer can read comments", (await json(`/api/documents/${id}/comments`, { token: viewer })).data?.canComment === false);
+check("viewer can't comment", (await json(`/api/documents/${id}/comments`, { method: "POST", token: viewer, body: { body: "hi", anchor } })).status === 403);
+check("bad anchor rejected", (await json(`/api/documents/${id}/comments`, { method: "POST", token: owner, body: { body: "hi", anchor: { pos: 1 } } })).status === 400);
+const thread = await json(`/api/documents/${id}/comments`, {
+  method: "POST",
+  token: owner,
+  body: { body: "Can we double-check this number?", anchor, mentions: [editorEmail, "stranger@example.com"] },
+});
+const threadId = thread.data?.id;
+check("owner starts a thread", thread.status === 201 && thread.data.threads[0].anchor.tag === "h1");
+await sleep(300);
+check("live clients hear about new comments", a.events.includes("comments"));
+const reply = await json(`/api/documents/${id}/comments`, { method: "POST", token: editor, body: { body: "Yes, confirmed.", threadId } });
+check("editor replies", reply.status === 201 && reply.data.threads[0].replies.length === 1);
+const replyId = reply.data.id;
+let notes = (await json("/api/notifications", { token: editor })).data;
+check("mentioned editor is notified", notes?.notifications?.some((n) => n.kind === "mention" && n.documentId === id));
+check("owner is notified of the reply", (await json("/api/notifications", { token: owner })).data?.notifications?.some((n) => n.kind === "reply"));
+check("non-members can't be mentioned", (await json("/api/notifications", { token: stranger })).data?.notifications?.length === 0);
+await json("/api/notifications/read", { method: "POST", token: editor, body: {} });
+check("notifications marked read", (await json("/api/notifications", { token: editor })).data?.unread === 0);
+check("editor can't edit owner's comment", (await json(`/api/documents/${id}/comments/${threadId}`, { method: "PATCH", token: editor, body: { body: "x" } })).status === 403);
+check("viewer can't resolve", (await json(`/api/documents/${id}/comments/${threadId}`, { method: "PATCH", token: viewer, body: { resolved: true } })).status === 403);
+const resolved = await json(`/api/documents/${id}/comments/${threadId}`, { method: "PATCH", token: editor, body: { resolved: true } });
+check("editor resolves the thread", resolved.data?.threads?.[0]?.resolved === true);
+check("editor can't delete owner's thread", (await json(`/api/documents/${id}/comments/${threadId}`, { method: "DELETE", token: editor })).status === 403);
+const del = await json(`/api/documents/${id}/comments/${replyId}`, { method: "DELETE", token: owner });
+check("owner deletes a reply", del.data?.threads?.[0]?.replies?.length === 0);
+check("stranger can't read comments", (await json(`/api/documents/${id}/comments`, { token: stranger })).status === 404);
+
 // Revoke while connected
 const closed = new Promise((r) => (a.ws.onclose = (e) => r(e.code)));
 await json(`/api/documents/${id}/members/${encodeURIComponent(editorEmail)}`, { method: "DELETE", token: owner });
@@ -161,6 +196,10 @@ b.ws.close();
 check("only owner can stop sharing", (await json(`/api/documents/${id}`, { method: "DELETE", token: viewer })).status === 403);
 check("owner stops sharing", (await json(`/api/documents/${id}`, { method: "DELETE", token: owner })).status === 200);
 check("document is gone", (await json(`/api/documents/${id}`, { token: owner })).status === 404);
+const again = await json("/api/documents", { method: "POST", token: owner, body: { fileName: "x.html", html: "<p>x</p>" } });
+const gone = await json(`/api/documents/${again.data.id}/blobs/missing`, { method: "POST", token: owner, body: { hashes: [hash] } });
+check("unshared files' uploads are deleted", gone.data?.missing?.[0] === hash);
+await json(`/api/documents/${again.data.id}`, { method: "DELETE", token: owner });
 
 console.log(failures ? `\n${failures} failed` : "\nAll passed");
 process.exit(failures ? 1 : 0);

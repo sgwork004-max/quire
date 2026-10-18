@@ -20,6 +20,7 @@ import { Toasts } from "./components/Toasts";
 import { SignInDialog } from "./components/Account";
 import { ShareDialog } from "./components/ShareDialog";
 import { useCloud } from "./store/cloud";
+import { useComments } from "./store/comments";
 
 const app = () => useApp.getState();
 const library = () => useLibrary.getState();
@@ -59,6 +60,12 @@ const MENU_ACTIONS: Record<string, () => void> = {
     void (getSession(tab.id)?.flush() ?? Promise.resolve())
       .then(() => ipc.checkpoint(tab.id))
       .then(() => app().toast("Version saved. Your next edit starts a new one."));
+  },
+  comments: () => useComments.getState().togglePanel(),
+  "new-comment": () => {
+    const tab = activeTab(app());
+    if (!tab?.share) return app().toast("Share this file to comment on it.");
+    useComments.getState().startPick(tab.id);
   },
   share: () => {
     const tab = activeTab(app());
@@ -113,6 +120,11 @@ export default function App() {
       listen("cloud-changed", () => {
         useCloud.getState().refreshSoon();
         library().refreshSoon();
+      }),
+      listen<number>("notifications", (e) => {
+        const before = useComments.getState().unread;
+        if (e.payload !== before) void useComments.getState().loadNotifications();
+        if (e.payload > before) app().toast(e.payload === 1 ? "You have a new comment notification" : `${e.payload} unread comment notifications`);
       }),
       listen<Account | null>("auth-changed", (e) => useAccount.getState().signedIn(e.payload)),
       listen<string>("auth-failed", (e) => useAccount.getState().failed(e.payload)),

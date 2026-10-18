@@ -9,6 +9,8 @@ import { applyMinimalChange, mergeText } from "./merge";
 
 const MESSAGE_SYNC = 0;
 const MESSAGE_AWARENESS = 1;
+/** Quire extension: a one-word event, e.g. "comments" when comments changed. */
+const MESSAGE_EVENT = 2;
 const SAVE_DELAY_MS = 2000;
 /** SQLite rows are capped at 2 MB; store the document in 1 MB chunks. */
 const CHUNK = 1024 * 1024;
@@ -97,6 +99,14 @@ export class DocRoom extends DurableObject<Env> {
     const merged = mergeText(this.text.toString(), base, next);
     this.doc.transact(() => applyMinimalChange(this.text, merged), "api");
     return this.text.toString();
+  }
+
+  /** Tells every connected app that something outside the text changed. */
+  async notify(event: string): Promise<void> {
+    const msg = encoding.createEncoder();
+    encoding.writeVarUint(msg, MESSAGE_EVENT);
+    encoding.writeVarString(msg, event);
+    this.broadcast(encoding.toUint8Array(msg), null);
   }
 
   /** Disconnects everyone signed in as `email` (their access was removed). */

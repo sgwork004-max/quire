@@ -131,6 +131,47 @@ export interface ShareDetails {
   members: Member[];
 }
 
+export interface Person {
+  id?: string;
+  name: string;
+  email: string;
+  image?: string | null;
+}
+
+export interface CommentItem {
+  id: string;
+  body: string;
+  createdAt: number;
+  updatedAt: number;
+  author: Person & { id: string };
+}
+
+export interface Thread extends CommentItem {
+  anchor: { pos: string; tag: string; snippet: string } | null;
+  resolved: boolean;
+  replies: CommentItem[];
+}
+
+export interface CommentsReply {
+  threads: Thread[];
+  canComment: boolean;
+  people: { email: string; name: string }[];
+}
+
+export interface AppNotification {
+  id: string;
+  kind: "mention" | "reply" | "comment";
+  createdAt: number;
+  readAt: number | null;
+  documentId: string;
+  commentId: string;
+  threadId: string;
+  documentTitle: string;
+  actorName: string;
+  actorImage: string | null;
+  excerpt: string;
+}
+
 export const ipc = {
   // account
   account: () => invoke<Account | null>("account"),
@@ -154,6 +195,8 @@ export const ipc = {
   liveTicket: (documentId: string) => invoke<{ url: string; ticket: string; role: ShareRole }>("live_ticket", { documentId }),
   setLive: (documentId: string, live: boolean, synced?: string) => invoke<void>("set_live", { documentId, live, synced }),
   syncNow: () => invoke<void>("sync_now"),
+  cloudApi: <T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: unknown) =>
+    invoke<T>("cloud_api", { method, path, body }),
   // documents
   openDocument: (path: string) => invoke<DocumentInfo>("open_document", { path }),
   closeDocument: (id: string) => invoke<void>("close_document", { id }),

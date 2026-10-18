@@ -25,6 +25,7 @@
     "@tauri-apps/plugin-store": "^2.5.0",
     "clsx": "^2.1.1",
     "diff": "^9.0.0",
+    "lib0": "^0.2.119",
     "lucide-react": "^1.52.0",
     "parse5": "^8.0.1",
     "react": "^19.1.0",

@@ -145,6 +145,7 @@ pub fn run() {
             cloud::live_ticket,
             cloud::set_live,
             cloud::sync_now,
+            cloud::cloud_api,
             ui_log,
         ])
         .build(tauri::generate_context!())

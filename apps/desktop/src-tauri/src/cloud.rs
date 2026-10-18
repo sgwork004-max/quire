@@ -428,6 +428,10 @@ pub async fn sync_all(app: &AppHandle) -> R<()> {
             eprintln!("sync {id}: {e}");
         }
     }
+    // Unread mentions and replies, for the notification bell.
+    if let Ok(n) = call(&auth, reqwest::Method::GET, "/api/notifications", None).await {
+        let _ = app.emit("notifications", n["unread"].as_i64().unwrap_or(0));
+    }
     Ok(())
 }
 
@@ -624,4 +628,24 @@ pub fn set_live(cloud: State<'_, Cloud>, db: State<'_, Db>, document_id: String,
 #[tauri::command]
 pub async fn sync_now(app: AppHandle) -> R<()> {
     sync_all(&app).await
+}
+
+/// Comments and notifications go through this one call. The UI never sees
+/// the session token; only these paths and methods can be reached.
+#[tauri::command]
+pub async fn cloud_api(auth: State<'_, AuthState>, method: String, path: String, body: Option<Value>) -> R<Value> {
+    let allowed_path = path == "/api/notifications"
+        || path == "/api/notifications/read"
+        || (path.starts_with("/api/documents/") && path.split('/').nth(4) == Some("comments"));
+    let method = match method.as_str() {
+        "GET" => reqwest::Method::GET,
+        "POST" => reqwest::Method::POST,
+        "PATCH" => reqwest::Method::PATCH,
+        "DELETE" => reqwest::Method::DELETE,
+        _ => return Err("Method not allowed".into()),
+    };
+    if !allowed_path || path.contains("..") || path.contains('?') {
+        return Err("Path not allowed".into());
+    }
+    call(&auth, method, &path, body).await
 }

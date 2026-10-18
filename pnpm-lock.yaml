@@ -95,6 +95,9 @@ importers:
       diff:
         specifier: ^9.0.0
         version: 9.0.0
+      lib0:
+        specifier: ^0.2.119
+        version: 0.2.119
       lucide-react:
         specifier: ^1.52.0
         version: 1.52.0(@types/react@19.3.0)(react@19.3.0)

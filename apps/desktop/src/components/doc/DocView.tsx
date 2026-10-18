@@ -8,6 +8,8 @@ import { formatBytes, parentFolder } from "../../lib/format";
 import { Inspector } from "./Inspector";
 import { HistoryPanel } from "./HistoryPanel";
 import { VersionView } from "./VersionView";
+import { CommentsPanel } from "./CommentsPanel";
+import { frameMode, syncPins, useComments } from "../../store/comments";
 
 /**
  * Sandbox flags for documents. `allow-same-origin` is safe here because each
@@ -19,6 +21,7 @@ const SANDBOX =
 
 export function DocView({ tab, visible }: { tab: Tab; visible: boolean }) {
   const historyOpen = useApp((s) => s.historyOpen);
+  const commentsOpen = useComments((s) => s.panelOpen);
   const status = useApp((s) => s.status[tab.id]);
   const [versionId, setVersionId] = useState<number | null>(null);
 
@@ -33,6 +36,7 @@ export function DocView({ tab, visible }: { tab: Tab; visible: boolean }) {
         </div>
         {tab.mode === "visual" && <Inspector tab={tab} />}
         {historyOpen && visible && <HistoryPanel tab={tab} selected={versionId} onSelect={setVersionId} />}
+        {commentsOpen && visible && !historyOpen && <CommentsPanel tab={tab} />}
       </div>
       <StatusBar tab={tab} />
     </div>
@@ -188,7 +192,8 @@ export function onFrameReady(id: string) {
   const { tabs, selection } = useApp.getState();
   const tab = tabs.find((t) => t.id === id);
   if (!tab) return;
-  postToFrame(id, { type: "mode", mode: tab.mode });
+  postToFrame(id, { type: "mode", mode: frameMode(id) });
   const qid = selection[id]?.qid;
   if (tab.mode === "visual" && qid != null) postToFrame(id, { type: "select", qid });
+  syncPins(id);
 }
