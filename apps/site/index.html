@@ -106,8 +106,9 @@ h2{font-size:clamp(30px,3.8vw,46px);margin:0}
 .b1{grid-column:span 4}.b2{grid-column:span 2;grid-row:span 2}.b3,.b4{grid-column:span 2}.b5,.b6{grid-column:span 3}
 .bento .stage{min-height:150px}
 .b1 .stage,.b2 .stage{padding:0;place-items:start}
-.b1 .stage{position:relative;min-height:300px}.b1 picture,.b1 img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top left}
-.b2 img{width:100%;height:100%;object-fit:cover;object-position:top}
+/* Crops show whole cards; contain + matching backgrounds means nothing is ever cut off. */
+.b1 .stage{position:relative;min-height:300px;background:var(--bg)}.b2 .stage{position:relative;min-height:420px;background:var(--paper)}
+.b1 picture,.b1 img,.b2 picture,.b2 img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:top center}
 .search{width:100%;max-width:260px}
 .search .box{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:9px;background:var(--surface);border:1.5px solid var(--blue);font-size:13.5px;box-shadow:0 0 0 4px var(--blue-soft)}
 .search .hit{margin-top:8px;background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px;color:var(--text-2)}
@@ -183,7 +184,7 @@ footer .grow{flex:1}
   .flow,.facts,.split,.split.flip,.ways{grid-template-columns:minmax(0,1fr)}
   .bento{grid-template-columns:repeat(2,minmax(0,1fr))}
   .b1,.b2,.b5,.b6{grid-column:span 2}.b2{grid-row:auto}.b3,.b4{grid-column:span 1}
-  .b2 .stage{max-height:280px;overflow:hidden}
+  .b2 .stage{min-height:520px}
   .split{gap:32px}
 }
 @media (max-width:520px){.b3,.b4{grid-column:span 2}.mark{white-space:normal}}
