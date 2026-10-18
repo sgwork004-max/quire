@@ -14,6 +14,10 @@ cd packages/mcp && pnpm install && pnpm build
 
 ## Connect Claude
 
+**Easiest:** the Quire app has this server built in. Open Quire › Settings › Claude and click **Connect** for the Claude app and/or Claude Code. (It runs `Quire.app/Contents/MacOS/quire mcp`; no Node needed.)
+
+To use this Node version instead (for development):
+
 **Claude Code**
 
 ```bash

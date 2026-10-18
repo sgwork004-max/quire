@@ -11,6 +11,8 @@ export const SOURCE_LABEL: Record<string, string> = {
   edit: "Edited in Quire",
   restore: "Restored",
   remote: "Changed by a collaborator",
+  claude: "Changed by Claude",
+  import: "Imported",
 };
 
 const dayFormat = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "short", day: "numeric" });

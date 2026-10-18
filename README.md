@@ -32,6 +32,8 @@ Or download the `.dmg` from [Releases](https://github.com/sgwork004-max/quire/re
 
 Quire updates itself (Quire menu → Check for Updates).
 
+**Use it with Claude:** Quire › Settings › Claude › Connect. Claude (the desktop app or Claude Code) can then save the pages it makes straight into Quire and update them when you ask for changes.
+
 ## Develop
 
 Requirements: Node 22+, pnpm 10+, Rust (stable), Xcode Command Line Tools.

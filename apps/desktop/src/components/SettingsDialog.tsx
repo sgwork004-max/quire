@@ -3,8 +3,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentWindow, type Theme } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { LogOut, X } from "lucide-react";
-import { ipc } from "../lib/ipc";
+import { Loader2, LogOut, X } from "lucide-react";
+import { errorMessage, ipc } from "../lib/ipc";
 import { loadPref, savePref } from "../lib/prefs";
 import { checkForUpdates } from "../lib/updates";
 import { useAccount } from "../store/account";
@@ -35,6 +35,63 @@ function Row({ label, hint, children }: { label: string; hint?: string; children
         {hint && <div className="mt-0.5 text-[11px] leading-snug text-ink-3">{hint}</div>}
       </div>
       <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
+type ClaudeApp = "desktop" | "code";
+const CLAUDE_APPS: { id: ClaudeApp; name: string; restart: string }[] = [
+  { id: "desktop", name: "Claude app", restart: "Quit and reopen the Claude app to start using it." },
+  { id: "code", name: "Claude Code", restart: "Start a new Claude Code session to use it." },
+];
+
+/** Connects Quire's built-in MCP server to the Claude app and Claude Code. */
+function ClaudeConnect() {
+  const [status, setStatus] = useState<Awaited<ReturnType<typeof ipc.claudeStatus>> | null>(null);
+  const [busy, setBusy] = useState<ClaudeApp | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const load = () => void ipc.claudeStatus().then(setStatus).catch(() => setStatus(null));
+  useEffect(load, []);
+
+  const toggle = async (app: (typeof CLAUDE_APPS)[number], connect: boolean) => {
+    setBusy(app.id);
+    setNote(null);
+    try {
+      await ipc.connectClaude(app.id, connect);
+      setNote(connect ? `Connected. ${app.restart}` : `Disconnected from ${app.name}.`);
+    } catch (e) {
+      setNote(`Couldn't change ${app.name}: ${errorMessage(e)}`);
+    }
+    setBusy(null);
+    load();
+  };
+
+  return (
+    <div className="pt-1">
+      {CLAUDE_APPS.map((app) => {
+        const s = status?.[app.id];
+        return (
+          <div key={app.id} className="flex h-9 items-center gap-2">
+            <span className="flex-1 text-[12.5px] text-ink">{app.name}</span>
+            {s?.connected && <span className="text-[11.5px] text-success">Connected</span>}
+            {!s?.connected && s && !s.installed && <span className="text-[11.5px] text-ink-3">Not installed</span>}
+            <button
+              type="button"
+              disabled={!status || busy !== null}
+              onClick={() => void toggle(app, !s?.connected)}
+              className={clsx(
+                "flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[12px] disabled:opacity-50",
+                s?.connected ? "border border-line-strong text-ink hover:bg-hover" : "bg-accent font-medium text-accent-fg hover:bg-accent-hover",
+              )}
+            >
+              {busy === app.id && <Loader2 size={12} className="animate-spin" />}
+              {s?.connected ? "Disconnect" : "Connect"}
+            </button>
+          </div>
+        );
+      })}
+      {note && <p className="mt-1 text-[11.5px] leading-snug text-ink-2">{note}</p>}
+      <p className="mt-1.5 text-[11px] leading-snug text-ink-3">Then just ask, for example “make a dashboard of these numbers and save it to Quire”.</p>
     </div>
   );
 }
@@ -157,6 +214,10 @@ function SettingsPanel() {
             >
               Import HTML now…
             </button>
+          </Row>
+
+          <Row label="Claude" hint="Claude can save the pages it makes straight into Quire, and update them when you ask for changes.">
+            <ClaudeConnect />
           </Row>
 
           <Row label="Updates" hint={version ? `You have Quire ${version}.` : undefined}>

@@ -10,6 +10,7 @@ mod export;
 mod extract;
 mod inbox;
 mod library;
+pub mod mcp;
 mod menu;
 mod protocol;
 mod scan;
@@ -194,6 +195,8 @@ pub fn run() {
             inbox::set_inbox_enabled,
             inbox::import_scan,
             inbox::import_paths,
+            mcp::claude_status,
+            mcp::connect_claude,
             ui_log,
         ])
         .build(tauri::generate_context!())

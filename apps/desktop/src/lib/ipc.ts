@@ -230,6 +230,9 @@ export const ipc = {
   removeDataSource: (id: number) => invoke<void>("remove_data_source", { id }),
   inboxStatus: () =>
     invoke<{ enabled: boolean; downloads: string; desktop: string; documents: string; inbox: string; pastCount: number }>("inbox_status"),
+  claudeStatus: () =>
+    invoke<{ desktop: { installed: boolean; connected: boolean }; code: { installed: boolean; connected: boolean } }>("claude_status"),
+  connectClaude: (target: "desktop" | "code", connect: boolean) => invoke<void>("connect_claude", { target, connect }),
   importScan: (folders: string[], files: string[]) => invoke<ImportCandidate[]>("import_scan", { folders, files }),
   importPaths: (paths: string[], dest: string | null) =>
     invoke<{ added: number; updated: number; unchanged: number; ids: number[] }>("import_paths", { paths, dest }),
