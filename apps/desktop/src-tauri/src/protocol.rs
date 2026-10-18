@@ -97,7 +97,11 @@ fn html_response(id: &str, html: &str) -> Response<Cow<'static, [u8]>> {
 /// Inserts the bridge script as the first thing in `<head>` (or `<html>`, or
 /// after the doctype), so it runs before the page's own scripts.
 pub fn inject(html: &str, script_url: &str) -> String {
-    let tag = format!(r#"<script src="{script_url}"></script>"#);
+    insert_in_head(html, &format!(r#"<script src="{script_url}"></script>"#))
+}
+
+/// Inserts `tag` at the start of `<head>` (or `<html>`, or after the doctype).
+pub fn insert_in_head(html: &str, tag: &str) -> String {
     let lower = html.to_ascii_lowercase();
     let at = tag_end(&lower, "<head")
         .or_else(|| tag_end(&lower, "<html"))
@@ -105,7 +109,7 @@ pub fn inject(html: &str, script_url: &str) -> String {
         .unwrap_or(0);
     let mut out = String::with_capacity(html.len() + tag.len());
     out.push_str(&html[..at]);
-    out.push_str(&tag);
+    out.push_str(tag);
     out.push_str(&html[at..]);
     out
 }

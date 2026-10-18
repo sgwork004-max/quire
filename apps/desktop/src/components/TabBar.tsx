@@ -19,7 +19,9 @@ import {
 } from "lucide-react";
 import { useCloud } from "../store/cloud";
 import { useComments } from "../store/comments";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Sparkles } from "lucide-react";
+import { useAi } from "../store/ai";
+import { useDataDialog } from "./DataDialog";
 import { HOME, useApp, type Mode, type Tab, type Viewport } from "../store/app";
 import { popupMenu } from "../lib/menu";
 import { IconButton } from "./IconButton";
@@ -180,6 +182,11 @@ export function TabBar() {
       { text: "Reload", action: () => reload() },
       { text: "Show in Finder", action: reveal },
       { text: "Open in Browser", action: openInBrowser },
+      null,
+      { text: "Live Data…", action: () => active && useDataDialog.getState().show(active) },
+      null,
+      { text: "Export as PDF…", action: () => window.dispatchEvent(new CustomEvent("quire-menu", { detail: "export-pdf" })) },
+      { text: "Export as Single HTML File…", action: () => window.dispatchEvent(new CustomEvent("quire-menu", { detail: "export-html" })) },
     ]);
 
   return (
@@ -242,6 +249,11 @@ export function TabBar() {
           <span className="mx-0.5 h-4 w-px bg-line-strong" />
           <Segmented items={VIEWPORTS} value={viewport} onChange={setViewport} />
           {active.share && <CommentsButton tabId={active.id} />}
+          {(!active.share || ["owner", "editor"].includes(active.share.role)) && (
+            <IconButton label="Edit with AI" shortcut="⌘J" onClick={() => void useAi.getState().show()}>
+              <Sparkles size={15} strokeWidth={1.75} />
+            </IconButton>
+          )}
           <IconButton label="Version history" shortcut="⇧⌘H" active={historyOpen} onClick={toggleHistory}>
             <History size={15} strokeWidth={1.75} />
           </IconButton>

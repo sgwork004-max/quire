@@ -45,7 +45,7 @@ interface LibraryState {
   trash: (file: FileEntry) => Promise<void>;
   restore: (file: FileEntry) => Promise<void>;
   emptyTrash: () => Promise<void>;
-  newFile: () => Promise<void>;
+  newFile: (template?: string) => Promise<void>;
   fileMenu: (file: FileEntry) => void;
 
   addFolder: (path?: string) => Promise<void>;
@@ -222,21 +222,13 @@ export const useLibrary = create<LibraryState>((set, get) => ({
     void get().refresh();
   },
 
-  newFile: async () => {
+  newFile: async (template) => {
     const { view, overview } = get();
-    let dir = view.kind === "location" ? overview?.locations.find((l) => l.id === view.id)?.path : undefined;
-    if (!dir) {
-      const picked = await open({
-        directory: true,
-        title: "Choose a folder for the new file",
-        defaultPath: overview?.locations[0]?.path,
-      });
-      if (typeof picked !== "string") return;
-      dir = picked;
-    }
+    // Inside a folder view, create it there; otherwise in ~/Quire.
+    const dir = (view.kind === "location" ? overview?.locations.find((l) => l.id === view.id)?.path : undefined) ?? "";
     try {
-      const file = await ipc.newFile(dir);
-      await useApp.getState().openPaths([file.path], "visual");
+      const file = await ipc.newFile(dir, template);
+      await useApp.getState().openPaths([file.path], template ? "view" : "visual");
       void get().refresh();
     } catch (e) {
       fail("Couldn't create the file")(e);

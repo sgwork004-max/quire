@@ -2951,6 +2951,7 @@ dependencies = [
 name = "quire"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "keyring",
  "mime_guess",
  "notify",

@@ -1,10 +1,13 @@
+mod ai;
 mod assets;
 mod auth;
 mod browser;
 mod cloud;
 mod commands;
+mod datasources;
 mod db;
 mod documents;
+mod export;
 mod extract;
 mod library;
 mod menu;
@@ -84,8 +87,20 @@ pub fn run() {
         .setup(|app| {
             let handle = app.handle().clone();
             let db = db::Db::open(&app.path().app_data_dir()?)?;
+            if let Err(e) = library::forget_missing_loose(&db.conn()) {
+                eprintln!("index cleanup failed: {e}");
+            }
             if let Err(e) = library::purge_expired_trash(&db) {
                 eprintln!("trash purge failed: {e}");
+            }
+            // ~/Quire is where the CLI and MCP server put new files; keep it in the library.
+            if let Some(home) = std::env::var_os("HOME") {
+                let quire_dir = std::path::Path::new(&home).join("Quire");
+                if quire_dir.is_dir() {
+                    if let Ok(dir) = documents::dunce_canonicalize(&quire_dir) {
+                        let _ = library::add_location(&db.conn(), &dir);
+                    }
+                }
             }
             let locations = library::locations(&db.conn())?;
             app.manage(db);
@@ -94,6 +109,7 @@ pub fn run() {
             }
             app.state::<PendingOpens>().push(&handle, cli_paths());
             cloud::start(&handle);
+            datasources::start(&handle);
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -146,6 +162,16 @@ pub fn run() {
             cloud::set_live,
             cloud::sync_now,
             cloud::cloud_api,
+            ai::ai_key_status,
+            ai::ai_set_key,
+            ai::ai_remove_key,
+            ai::ai_edit,
+            datasources::list_data_sources,
+            datasources::add_data_source,
+            datasources::refresh_data_source,
+            datasources::remove_data_source,
+            export::print_document,
+            export::export_standalone,
             ui_log,
         ])
         .build(tauri::generate_context!())

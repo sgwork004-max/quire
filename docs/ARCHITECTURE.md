@@ -56,6 +56,13 @@ Desktop app (Tauri)                         Quire Cloud (Cloudflare)
 - When comments change, the room broadcasts a one-word event (`comments`) over the live connection (message type 2) and every open copy reloads its threads.
 - Notifications are created for mentions (only of people on the file), replies to threads you're in, and new comments on your files. The desktop polls them with its sync loop.
 
+## Power features (Phase 6)
+
+- **MCP server and CLI** (`packages/mcp`): a Node process that reads Quire's SQLite index read-only, writes only HTML files inside library folders or `~/Quire`, and records the previous content in `versions` before overwriting. New files are opened in the app (`open -b app.quire.desktop`), which indexes them.
+- **AI edit** (`src-tauri/src/ai.rs`): the user's Anthropic API key lives in the Keychain and is only used from Rust. Claude (Opus 5.5, structured output) returns exact find/replace edits; the UI applies them only if every `find` matches exactly once, shows a diff, and applies on approval as one undoable change, which also flows through live collaboration. Server-side refusal fallbacks are on (`fallbacks: "default"`).
+- **Live data** (`datasources.rs`): https CSV/JSON (Google Sheets links converted to CSV export) downloaded into `data/<name>` next to the page on a schedule; shared copies get it through normal asset sync.
+- **Export** (`export.rs`): PDF via a print window with no app permissions that can't navigate away; single-file HTML with CSS/JS inlined, images and fonts as data URIs, and data files served to `fetch()` by an embedded shim.
+
 ## How sync works on the desktop
 
 - `cloud_links` (desktop SQLite) links a local file to a cloud document: the owner's original, or for recipients a copy in `~/Library/Application Support/app.quire.desktop/shared/<id>/`. Recipient copies are deleted on sign-out.

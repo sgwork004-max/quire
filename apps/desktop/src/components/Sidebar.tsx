@@ -27,6 +27,15 @@ export function Sidebar() {
   const showNewMenu = () =>
     void popupMenu([
       { text: "New HTML File", action: () => void newFile() },
+      {
+        text: "New from Template",
+        items: [
+          { text: "Dashboard", action: () => void newFile("dashboard") },
+          { text: "Report", action: () => void newFile("report") },
+          { text: "Landing page", action: () => void newFile("landing") },
+          { text: "One-pager", action: () => void newFile("one-pager") },
+        ],
+      },
       { text: "Open File…", action: () => void openDialog() },
       null,
       { text: "Add Folder to Library…", action: () => void addFolder() },

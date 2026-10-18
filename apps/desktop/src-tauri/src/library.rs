@@ -275,6 +275,26 @@ pub fn forget(conn: &Connection, id: i64) -> Result<(), String> {
     delete_row(conn, id)
 }
 
+/// Forgets opened files outside any library folder that no longer exist
+/// (folders are kept in sync by their watchers; loose files have none).
+pub fn forget_missing_loose(conn: &Connection) -> Result<usize, String> {
+    let rows: Vec<(i64, String)> = {
+        let mut stmt = conn
+            .prepare("SELECT id, path FROM files WHERE location_id IS NULL AND trashed_ms IS NULL")
+            .map_err(err)?;
+        let rows = stmt.query_map([], |r| Ok((r.get(0)?, r.get(1)?))).map_err(err)?;
+        rows.filter_map(Result::ok).collect()
+    };
+    let mut n = 0;
+    for (id, path) in rows {
+        if !Path::new(&path).exists() {
+            delete_row(conn, id)?;
+            n += 1;
+        }
+    }
+    Ok(n)
+}
+
 // ---------------------------------------------------------------------------
 // Queries
 
@@ -612,12 +632,29 @@ pub const NEW_FILE_TEMPLATE: &str = r#"<!doctype html>
 </html>
 "#;
 
+/// Built-in starting points for File → New from Template.
+pub const TEMPLATES: &[(&str, &str, &str)] = &[
+    ("dashboard", "Dashboard", include_str!("templates/dashboard.html")),
+    ("report", "Report", include_str!("templates/report.html")),
+    ("landing", "Landing page", include_str!("templates/landing.html")),
+    ("one-pager", "One-pager", include_str!("templates/one-pager.html")),
+];
+
 pub fn new_file(conn: &Connection, dir: &Path) -> Result<FileEntry, String> {
+    new_file_with(conn, dir, "Untitled", NEW_FILE_TEMPLATE)
+}
+
+pub fn new_from_template(conn: &Connection, dir: &Path, template: &str) -> Result<FileEntry, String> {
+    let (_, name, html) = TEMPLATES.iter().find(|(id, _, _)| *id == template).ok_or("Unknown template")?;
+    new_file_with(conn, dir, name, html)
+}
+
+fn new_file_with(conn: &Connection, dir: &Path, stem: &str, html: &str) -> Result<FileEntry, String> {
     if !dir.is_dir() {
         return Err(format!("{} is not a folder", dir.display()));
     }
-    let path = unique_path(dir, "Untitled", "html");
-    std::fs::write(&path, NEW_FILE_TEMPLATE).map_err(err)?;
+    let path = unique_path(dir, stem, "html");
+    std::fs::write(&path, html).map_err(err)?;
     let id = mark_opened(conn, &path)?;
     get(conn, id)
 }

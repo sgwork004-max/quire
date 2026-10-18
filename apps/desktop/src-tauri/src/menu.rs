@@ -30,10 +30,15 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .item(&item("save", "Save Version", "CmdOrCtrl+S")?)
         .item(&item("share", "Share…", "CmdOrCtrl+Shift+S")?)
         .separator()
+        .item(&item("export-pdf", "Export as PDF…", "CmdOrCtrl+P")?)
+        .item(&item("export-html", "Export as Single HTML File…", "CmdOrCtrl+Shift+E")?)
+        .separator()
         .item(&item("close-tab", "Close Tab", "CmdOrCtrl+W")?)
         .separator()
         .item(&item("reveal", "Show in Finder", "CmdOrCtrl+Shift+R")?)
         .item(&item("open-in-browser", "Open in Browser", "CmdOrCtrl+Shift+B")?)
+        .separator()
+        .item(&item("live-data", "Live Data…", "CmdOrCtrl+Shift+D")?)
         .build()?;
 
     // Undo/redo are custom so one shortcut works across text fields, the code
@@ -48,6 +53,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .select_all()
         .separator()
         .item(&item("search", "Search Library", "CmdOrCtrl+K")?)
+        .item(&item("ai-edit", "Edit with AI…", "CmdOrCtrl+J")?)
         .build()?;
 
     let view = SubmenuBuilder::new(app, "View")

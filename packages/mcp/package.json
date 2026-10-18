@@ -1,0 +1,27 @@
+{
+  "name": "@quire/mcp",
+  "version": "0.1.0",
+  "description": "Quire command-line tool and MCP server: let Claude and other AI tools work with your HTML library",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "bin": {
+    "quire": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.3"
+  }
+}

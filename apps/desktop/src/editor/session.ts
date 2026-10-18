@@ -354,6 +354,26 @@ export class EditorSession {
     }
   }
 
+  /** Applies a reviewed AI edit as one undoable change (synced live in shared files). */
+  applyChanges(changes: Change[], event = "input.ai") {
+    if (this.readOnly) throw new Error("You can view this file but not edit it.");
+    this.view.dispatch({
+      changes,
+      annotations: [PreviewUpdate.of("reload"), Transaction.userEvent.of(event)],
+      scrollIntoView: false,
+    });
+  }
+
+  /** The selected element's tag, text and source, to point AI edit at it. */
+  focusFor(qid: number): { tag: string; snippet: string; source: string } | null {
+    const el = this.element(qid);
+    if (!el) return null;
+    const source = this.text.slice(el.start, el.end);
+    const inner = this.text.slice(el.startTagEnd, el.innerEnd ?? el.startTagEnd);
+    const snippet = inner.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
+    return { tag: el.tag, snippet, source: source.slice(0, 20000) };
+  }
+
   /** Puts the code cursor on an element (used when switching Visual -> Code). */
   revealElement(qid: number) {
     const el = this.element(qid);

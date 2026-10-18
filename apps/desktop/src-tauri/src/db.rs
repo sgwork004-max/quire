@@ -71,6 +71,20 @@ const MIGRATIONS: &[&str] = &[
         assets_sig   TEXT NOT NULL DEFAULT ''
     );
     "#,
+    // v3: live data sources downloaded next to a page on a schedule
+    r#"
+    CREATE TABLE data_sources (
+        id             INTEGER PRIMARY KEY,
+        doc_path       TEXT NOT NULL,
+        name           TEXT NOT NULL,
+        url            TEXT NOT NULL,
+        interval_min   INTEGER NOT NULL,
+        last_fetched_ms INTEGER,
+        last_error     TEXT,
+        created_ms     INTEGER NOT NULL,
+        UNIQUE (doc_path, name)
+    );
+    "#,
 ];
 
 pub struct Db {

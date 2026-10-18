@@ -172,6 +172,16 @@ export interface AppNotification {
   excerpt: string;
 }
 
+export interface DataSource {
+  id: number;
+  docPath: string;
+  name: string;
+  url: string;
+  intervalMin: number;
+  lastFetchedMs: number | null;
+  lastError: string | null;
+}
+
 export const ipc = {
   // account
   account: () => invoke<Account | null>("account"),
@@ -195,6 +205,18 @@ export const ipc = {
   liveTicket: (documentId: string) => invoke<{ url: string; ticket: string; role: ShareRole }>("live_ticket", { documentId }),
   setLive: (documentId: string, live: boolean, synced?: string) => invoke<void>("set_live", { documentId, live, synced }),
   syncNow: () => invoke<void>("sync_now"),
+  listDataSources: (path: string) => invoke<DataSource[]>("list_data_sources", { path }),
+  addDataSource: (path: string, url: string, name: string, intervalMin: number) =>
+    invoke<DataSource>("add_data_source", { path, url, name, intervalMin }),
+  refreshDataSource: (id: number) => invoke<DataSource>("refresh_data_source", { id }),
+  removeDataSource: (id: number) => invoke<void>("remove_data_source", { id }),
+  printDocument: (id: string) => invoke<void>("print_document", { id }),
+  exportStandalone: (id: string, dest: string) => invoke<string>("export_standalone", { id, dest }),
+  aiKeyStatus: () => invoke<boolean>("ai_key_status"),
+  aiSetKey: (key: string) => invoke<void>("ai_set_key", { key }),
+  aiRemoveKey: () => invoke<void>("ai_remove_key"),
+  aiEdit: (html: string, instruction: string, focus: { tag: string; snippet: string; source: string } | null) =>
+    invoke<{ summary: string; edits: { find: string; replace: string }[] }>("ai_edit", { html, instruction, focus }),
   cloudApi: <T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: unknown) =>
     invoke<T>("cloud_api", { method, path, body }),
   // documents
@@ -224,7 +246,7 @@ export const ipc = {
   trashFile: (id: number) => invoke<void>("trash_file", { id }),
   restoreFile: (id: number) => invoke<FileEntry>("restore_file", { id }),
   emptyTrash: () => invoke<number>("empty_trash"),
-  newFile: (dir: string) => invoke<FileEntry>("new_file", { dir }),
+  newFile: (dir: string, template?: string) => invoke<FileEntry>("new_file", { dir, template }),
   // versions
   listVersions: (path: string) => invoke<VersionMeta[]>("list_versions", { path }),
   versionContent: (id: number) => invoke<string>("version_content", { id }),

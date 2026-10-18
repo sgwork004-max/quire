@@ -7,6 +7,7 @@ Open-source "home for HTML": view, organise, edit and share HTML files. Local-fi
 - `pnpm dev`: run the desktop app in dev mode
 - `pnpm dev:cloud`: run Quire Cloud locally at http://localhost:8787 (debug desktop builds use it)
 - `pnpm check`: TypeScript + `cargo check`
+- `cd packages/mcp && pnpm build`: build the `quire` CLI / MCP server (`node packages/mcp/dist/cli.js mcp`)
 - `cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml`: Rust tests (protocol security rules)
 - `pnpm --filter @quire/desktop tauri build --debug --bundles app`: debug `.app`, needed to test Finder "Open With"
 

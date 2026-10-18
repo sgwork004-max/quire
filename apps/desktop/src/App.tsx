@@ -6,7 +6,8 @@ import { activeTab, HOME, useApp, type Mode, type Viewport } from "./store/app";
 import { useLibrary, type Layout } from "./store/library";
 import { useAccount } from "./store/account";
 import type { Account } from "./lib/ipc";
-import { ipc, isHtmlPath, type SortKey } from "./lib/ipc";
+import { errorMessage, ipc, isHtmlPath, type SortKey } from "./lib/ipc";
+import { save } from "@tauri-apps/plugin-dialog";
 import { loadPref } from "./lib/prefs";
 import { flushAll, getSession } from "./editor/session";
 import { getFrame, postToFrame } from "./editor/frames";
@@ -19,6 +20,9 @@ import { DropOverlay } from "./components/DropOverlay";
 import { Toasts } from "./components/Toasts";
 import { SignInDialog } from "./components/Account";
 import { ShareDialog } from "./components/ShareDialog";
+import { AiDialog } from "./components/AiDialog";
+import { DataDialog, useDataDialog } from "./components/DataDialog";
+import { useAi } from "./store/ai";
 import { useCloud } from "./store/cloud";
 import { useComments } from "./store/comments";
 
@@ -61,6 +65,13 @@ const MENU_ACTIONS: Record<string, () => void> = {
       .then(() => ipc.checkpoint(tab.id))
       .then(() => app().toast("Version saved. Your next edit starts a new one."));
   },
+  "ai-edit": () => void useAi.getState().show(),
+  "export-pdf": () => void exportActive("pdf"),
+  "export-html": () => void exportActive("html"),
+  "live-data": () => {
+    const tab = activeTab(app());
+    if (tab) useDataDialog.getState().show(tab);
+  },
   comments: () => useComments.getState().togglePanel(),
   "new-comment": () => {
     const tab = activeTab(app());
@@ -94,6 +105,26 @@ const MENU_ACTIONS: Record<string, () => void> = {
   ),
 };
 
+/** Saves pending edits, then prints (PDF) or writes a single self-contained HTML file. */
+async function exportActive(kind: "pdf" | "html") {
+  const tab = activeTab(app());
+  if (!tab) return app().toast("Open a file to export it.");
+  await getSession(tab.id)?.flush();
+  try {
+    if (kind === "pdf") {
+      await ipc.printDocument(tab.id);
+      return;
+    }
+    const stem = tab.name.replace(/\.[^.]+$/, "");
+    const dest = await save({ defaultPath: `${stem} (single file).html`, filters: [{ name: "HTML", extensions: ["html"] }] });
+    if (!dest) return;
+    await ipc.exportStandalone(tab.id, dest);
+    app().toast("Exported. Everything is inside one HTML file, ready to send.");
+  } catch (e) {
+    app().toast(`Couldn't export: ${errorMessage(e)}`);
+  }
+}
+
 async function restorePrefs() {
   const [sidebarOpen, codeWidth, layout, sort] = await Promise.all([
     loadPref<boolean>("sidebarOpen"),
@@ -117,6 +148,10 @@ export default function App() {
       listen<string>("menu", (e) => MENU_ACTIONS[e.payload]?.()),
       listen<string[]>("open-paths", (e) => void app().openPaths(e.payload)),
       listen("library-changed", () => library().refreshSoon()),
+      // Fresh live data: reload any open tab of that page.
+      listen<string>("data-refreshed", (e) => {
+        for (const t of app().tabs) if (t.path === e.payload) app().reload(t.id);
+      }),
       listen("cloud-changed", () => {
         useCloud.getState().refreshSoon();
         library().refreshSoon();
@@ -157,6 +192,9 @@ export default function App() {
       getCurrentWindow().onCloseRequested(() => flushAll()),
     ];
     window.addEventListener("message", handleBridgeMessage);
+    // In-app menus reuse the native menu's actions.
+    const appMenu = (e: Event) => MENU_ACTIONS[(e as CustomEvent<string>).detail]?.();
+    window.addEventListener("quire-menu", appMenu);
 
     // Listeners must be attached before asking for files queued at launch.
     void Promise.all(unlisten)
@@ -168,6 +206,7 @@ export default function App() {
 
     return () => {
       window.removeEventListener("message", handleBridgeMessage);
+      window.removeEventListener("quire-menu", appMenu);
       unlisten.forEach((u) => void u.then((f) => f()));
     };
   }, []);
@@ -187,6 +226,8 @@ export default function App() {
       {dragging && <DropOverlay />}
       <SignInDialog />
       <ShareDialog />
+      <AiDialog />
+      <DataDialog />
       <Toasts />
     </div>
   );
