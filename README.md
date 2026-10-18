@@ -18,6 +18,20 @@ AI tools now produce HTML all the time: dashboards, reports, one-pagers, prototy
 - Device-width previews: fit, desktop 1440, tablet 768, mobile 390
 - Show in Finder, Open in Browser
 
+## Install
+
+**Mac** (Apple Silicon and Intel), in Terminal:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh
+```
+
+Or download the `.dmg` from [Releases](https://github.com/sgwork004-max/quire/releases/latest). Quire isn't signed with an Apple Developer ID, so the first time you open a downloaded copy, right-click Quire.app → Open (on macOS 15+, System Settings → Privacy & Security → Open Anyway). The installer above avoids this step.
+
+**Windows:** download the installer from [Releases](https://github.com/sgwork004-max/quire/releases/latest). If SmartScreen warns, choose More info → Run anyway.
+
+Quire updates itself (Quire menu → Check for Updates).
+
 ## Develop
 
 Requirements: Node 22+, pnpm 10+, Rust (stable), Xcode Command Line Tools.

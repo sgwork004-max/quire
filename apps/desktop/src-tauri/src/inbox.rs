@@ -39,7 +39,7 @@ pub struct Imported {
 }
 
 fn home() -> Option<PathBuf> {
-    std::env::var_os("HOME").map(PathBuf::from)
+    crate::home_dir()
 }
 
 pub fn downloads_dir() -> Option<PathBuf> {

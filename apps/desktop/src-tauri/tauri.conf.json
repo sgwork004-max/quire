@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Quire",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "app.quire.desktop",
   "build": {
     "beforeDevCommand": "pnpm dev",
@@ -20,7 +20,10 @@
         "minHeight": 480,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": { "x": 18, "y": 28 },
+        "trafficLightPosition": {
+          "x": 18,
+          "y": 28
+        },
         "dragDropEnabled": true
       }
     ],
@@ -50,10 +53,14 @@
     "targets": "all",
     "category": "Productivity",
     "shortDescription": "View, organise, edit and share HTML",
-    "copyright": "Quire contributors · AGPL-3.0",
+    "copyright": "Quire contributors \u00b7 AGPL-3.0",
     "fileAssociations": [
       {
-        "ext": ["html", "htm", "xhtml"],
+        "ext": [
+          "html",
+          "htm",
+          "xhtml"
+        ],
         "name": "HTML Document",
         "description": "HTML document",
         "role": "Viewer",
@@ -61,13 +68,24 @@
         "mimeType": "text/html"
       }
     ],
-    "macOS": { "minimumSystemVersion": "11.0" },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM0NkFBMjU1NjM5NUJCQ0YKUldUUHU1VmpWYUpxTkdTNktqcnByOGxxdUZkUmdGZGw4MWdLZFZ4eC9jKzJHYk1wYktmSElwUmwK",
+      "endpoints": [
+        "https://github.com/sgwork004-max/quire/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

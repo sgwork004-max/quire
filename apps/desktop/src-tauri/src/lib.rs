@@ -54,6 +54,11 @@ fn ui_log(message: String) {
     eprintln!("[ui] {message}");
 }
 
+/// The user's home folder on every platform (HOME on macOS/Linux, USERPROFILE on Windows).
+pub fn home_dir() -> Option<std::path::PathBuf> {
+    std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE")).map(std::path::PathBuf::from)
+}
+
 fn cli_paths() -> Vec<String> {
     std::env::args()
         .skip(1)
@@ -68,6 +73,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_store::Builder::new().build())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(documents::Registry::default())
         .manage(watcher::Watchers::default())
         .manage(scan::LocationWatchers::default())
@@ -96,8 +103,8 @@ pub fn run() {
                 eprintln!("trash purge failed: {e}");
             }
             // ~/Quire is where the CLI and MCP server put new files; keep it in the library.
-            if let Some(home) = std::env::var_os("HOME") {
-                let quire_dir = std::path::Path::new(&home).join("Quire");
+            if let Some(home) = home_dir() {
+                let quire_dir = home.join("Quire");
                 if quire_dir.is_dir() {
                     if let Ok(dir) = documents::dunce_canonicalize(&quire_dir) {
                         let _ = library::add_location(&db.conn(), &dir);

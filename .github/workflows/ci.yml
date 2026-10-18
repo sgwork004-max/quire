@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+      - run: pnpm install --frozen-lockfile
+      - name: Desktop UI
+        run: pnpm --filter @quire/desktop typecheck && pnpm --filter @quire/desktop test
+      - name: Cloud
+        run: pnpm --filter @quire/cloud typecheck
+      - name: CLI and MCP server
+        run: pnpm --filter @quire/mcp typecheck && pnpm --filter @quire/mcp test
+      - name: Desktop core (Rust)
+        run: cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml

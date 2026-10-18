@@ -1,0 +1,65 @@
+# Builds Quire for macOS (Apple Silicon + Intel) and Windows when a version
+# tag is pushed (git tag v0.2.0 && git push --tags), and publishes a GitHub
+# Release with the installers and the signed update manifest the app checks.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+            rust_targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - platform: windows-latest
+            args: ""
+            rust_targets: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_targets }}
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri -> target
+      - run: pnpm install --frozen-lockfile
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Free Tauri updater key (not an Apple certificate): lets installed
+          # copies verify that updates really come from this repo.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: Quire ${{ github.ref_name }}
+          releaseBody: |
+            **Mac:** open Terminal and run
+            ```
+            curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh
+            ```
+            Or download the `.dmg` below; the first time, right-click Quire.app → Open (or System Settings → Privacy & Security → Open Anyway), because the app isn't signed by Apple.
+
+            **Windows:** download the `.msi` or `-setup.exe` below. If SmartScreen warns, click More info → Run anyway.
+
+            Installed copies update themselves.
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+          args: ${{ matrix.args }}

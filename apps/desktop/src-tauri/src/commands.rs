@@ -236,8 +236,7 @@ pub fn empty_trash(db: State<'_, Db>) -> R<usize> {
 pub fn new_file(app: AppHandle, db: State<'_, Db>, dir: String, template: Option<String>) -> R<FileEntry> {
     // No folder chosen: use ~/Quire, the default home for new files (also used by the CLI and MCP server).
     let dir = if dir.is_empty() {
-        let home = std::env::var_os("HOME").ok_or("No home folder")?;
-        let quire = Path::new(&home).join("Quire");
+        let quire = crate::home_dir().ok_or("No home folder")?.join("Quire");
         std::fs::create_dir_all(&quire).map_err(err)?;
         let quire = crate::documents::dunce_canonicalize(&quire)?;
         let known = library::locations(&db.conn())?.iter().any(|(_, p)| *p == quire);

@@ -12,6 +12,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
 
     let app_menu = SubmenuBuilder::new(app, "Quire")
         .about(None)
+        .item(&MenuItemBuilder::with_id("check-updates", "Check for Updates…").build(app)?)
         .separator()
         .services()
         .separator()

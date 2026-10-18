@@ -23,6 +23,7 @@ import { ShareDialog } from "./components/ShareDialog";
 import { AiDialog } from "./components/AiDialog";
 import { DataDialog, useDataDialog } from "./components/DataDialog";
 import { useAi } from "./store/ai";
+import { checkForUpdates } from "./lib/updates";
 import { useCloud } from "./store/cloud";
 import { useComments } from "./store/comments";
 
@@ -66,6 +67,7 @@ const MENU_ACTIONS: Record<string, () => void> = {
       .then(() => app().toast("Version saved. Your next edit starts a new one."));
   },
   "ai-edit": () => void useAi.getState().show(),
+  "check-updates": () => void checkForUpdates(true),
   "export-pdf": () => void exportActive("pdf"),
   "export-html": () => void exportActive("html"),
   "live-data": () => {
@@ -209,6 +211,7 @@ export default function App() {
       .then(restorePrefs)
       .then(() => library().refresh())
       .then(() => void useAccount.getState().load())
+      .then(() => window.setTimeout(() => void checkForUpdates(), 5000))
       .then(() => ipc.takePendingOpens())
       .then((paths) => (paths.length ? app().openPaths(paths) : undefined));
 

@@ -14,7 +14,13 @@ const failure = (e: unknown) => ({ ...text(e instanceof Error ? e.message : Stri
 
 export async function startServer(version: string) {
   const lib = new Library();
-  const server = new McpServer({ name: "quire", version });
+  const server = new McpServer(
+    { name: "quire", version },
+    {
+      instructions:
+        "Quire is the user's app for viewing, organising and sharing HTML files. Whenever you make an HTML page, dashboard, report or prototype for the user, save it with quire_create_file so it appears in Quire, and tell them it's there. When you revise a page you already saved, call quire_update_file with the same path instead of creating a new file; Quire keeps the previous version in its history. Use quire_list_files to find a page the user mentions.",
+    },
+  );
 
   server.registerTool(
     "quire_list_files",
