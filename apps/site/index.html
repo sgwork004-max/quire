@@ -69,6 +69,9 @@ nav a{color:var(--text-2);text-decoration:none}nav a:hover{color:var(--text)}
 .shot{border-radius:12px;overflow:hidden;box-shadow:var(--shadow);background:var(--surface);border:1px solid var(--line)}
 .hero .shot{margin:52px auto 0;max-width:1080px}
 .shot video{display:block;width:100%;height:auto;aspect-ratio:1440/900}
+.shot.promo{position:relative}.shot.promo video{aspect-ratio:16/9}
+.sound{position:absolute;right:14px;bottom:14px;font:600 13px/1 -apple-system,system-ui,sans-serif;padding:9px 14px;border-radius:99px;border:0;background:rgb(20 23 28/.72);color:#fff;cursor:pointer;backdrop-filter:blur(6px)}
+.sound:hover{background:rgb(20 23 28/.88)}
 .b1 video{position:absolute;inset:20px;width:calc(100% - 40px);height:calc(100% - 40px);object-fit:contain;border-radius:8px}
 .sub{margin:14px 0 0;color:var(--text-2);font-size:17px}
 .kicker{margin:0 0 10px;color:var(--blue);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
@@ -238,7 +241,7 @@ footer .legal{display:block;margin-top:14px;font-size:12px;color:var(--text-3);l
     <div class="bigcmd"><code id="hero-cmd" data-mac="curl -fsSL https://getquire.pages.dev/install.sh | sh" data-win="irm https://getquire.pages.dev/install.ps1 | iex">curl -fsSL https://getquire.pages.dev/install.sh | sh</code><button class="copy" type="button" data-copy="#hero-cmd">Copy</button></div>
     <p class="how1"><span class="is-mac">Paste in <b>Terminal</b> (⌘Space, type Terminal) and press Return.</span><span class="is-win">Paste in <b>PowerShell</b> (Start, type PowerShell) and press Enter.</span> Quire installs and opens.</p>
   </div>
-  <figure class="shot rise"><div class="chrome" aria-hidden="true"><i></i><i></i><i></i></div><video data-clip="tour" muted loop playsinline preload="auto" width="1440" height="900" poster="video/tour-light.jpg" aria-label="A tour of Quire in six steps: a library of live HTML previews and search inside pages; files dragged into a folder; a dashboard opened and checked at phone and tablet widths; the code shown beside the page; version history; and sharing with two people who then join live."></video></figure>
+  <figure class="shot promo rise"><video id="promo" src="video/promo.mp4" muted loop playsinline preload="auto" width="1920" height="1080" poster="video/promo.jpg" aria-label="Quire in 30 seconds: AI now makes HTML instead of PDFs, those files get lost in Downloads, and Quire gives them a home with live previews, search, folders, device previews, live sharing and Claude editing."></video><button type="button" class="sound" id="sound" aria-pressed="false">Sound on</button></figure>
   <p class="sources">Works with HTML from <b>ChatGPT</b><b>Claude</b><b>Gemini</b><b>Copilot</b><b>Cursor</b><b>any tool that saves .html</b></p>
 </div></div>
 
@@ -363,6 +366,19 @@ footer .legal{display:block;margin-top:14px;font-size:12px;color:var(--text-3);l
       } catch {}
     }),
   );
+  // Hero promo: plays muted; the button turns sound on and restarts it. Still poster for reduced motion.
+  (() => {
+    const v = document.getElementById("promo"), b = document.getElementById("sound");
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) v.removeAttribute("src");
+    else v.play().catch(() => {});
+    b.addEventListener("click", () => {
+      const on = v.muted;
+      v.muted = !on;
+      if (on) { v.currentTime = 0; v.play().catch(() => {}); }
+      b.textContent = on ? "Sound off" : "Sound on";
+      b.setAttribute("aria-pressed", String(on));
+    });
+  })();
   // Clips: light or dark to match the visitor, still posters if they prefer less motion.
   (() => {
     const dark = matchMedia("(prefers-color-scheme: dark)");
