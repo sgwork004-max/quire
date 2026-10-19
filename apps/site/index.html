@@ -282,9 +282,9 @@ footer .grow{flex:1}
   <div class="head rise"><h2 class="display">Get Quire. It's free.</h2><p>Installed copies update themselves.</p></div>
   <div class="ways">
     <div class="way rise"><h3>Mac</h3>
-      <p><a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg">Download the .dmg</a>, drag Quire to Applications, then right-click it › <b>Open</b> the first time. (macOS 15+: System Settings › Privacy &amp; Security › <b>Open Anyway</b>.)</p>
-      <p>Or skip that step: paste this in Terminal.</p>
+      <p><b>Easiest:</b> open Terminal (⌘Space, type Terminal), paste this and press Return. No security warning.</p>
       <div class="cmd"><code id="cmd">curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh</code><button class="copy" type="button" data-copy="#cmd">Copy</button></div>
+      <p>Prefer the <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg">.dmg</a>? Drag Quire to Applications and open it. When macOS says it can't verify the app, click <b>Done</b>, then go to <b>System Settings › Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>.</p>
     </div>
     <div class="way rise"><h3>Windows</h3>
       <p><a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-windows-setup.exe">Download the installer</a> and run it. If SmartScreen appears, click <b>More info › Run anyway</b>.</p>
@@ -298,7 +298,7 @@ footer .grow{flex:1}
   <details><summary>Is it really free?</summary><p>Yes, and open source. Sharing includes 25 MB of cloud space; only shared files use it.</p></details>
   <details><summary>Do I need an account?</summary><p>Only to share or comment. Everything else works signed out.</p></details>
   <details><summary>Does it change my original files?</summary><p>Imports are copies; originals stay put. Folders you add from your Mac are edited in place, with every version kept.</p></details>
-  <details><summary>Why does my Mac warn me the first time?</summary><p>Quire isn't signed with a paid Apple certificate yet. The code is public and every update is signed.</p></details>
+  <details><summary>Why does my Mac warn me the first time?</summary><p>Quire isn't signed with a paid Apple certificate yet, so macOS can't vouch for it. Installing with the Terminal command skips the warning, or click Open Anyway in System Settings › Privacy &amp; Security. The code is public and every update is signed.</p></details>
 </div></section>
 
 <section class="paper end"><div class="wrap">

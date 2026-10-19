@@ -54,7 +54,7 @@ jobs:
             ```
             curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh
             ```
-            Or download the `.dmg` below; the first time, right-click Quire.app → Open (or System Settings → Privacy & Security → Open Anyway), because the app isn't signed by Apple.
+            Or download the `.dmg` below. macOS will say it can't verify the app (it isn't signed by Apple): click Done, then System Settings → Privacy & Security → Open Anyway.
 
             **Windows:** download the `.msi` or `-setup.exe` below. If SmartScreen warns, click More info → Run anyway.
 

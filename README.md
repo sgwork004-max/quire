@@ -28,7 +28,7 @@ AI tools now produce HTML all the time: dashboards, reports, one-pagers, prototy
 curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh
 ```
 
-Or download the `.dmg` from [Releases](https://github.com/sgwork004-max/quire/releases/latest). Quire isn't signed with an Apple Developer ID, so the first time you open a downloaded copy, right-click Quire.app → Open (on macOS 15+, System Settings → Privacy & Security → Open Anyway). The installer above avoids this step.
+Or download the `.dmg`. Quire isn't signed with an Apple Developer ID, so macOS says it can't verify the app: click Done, then System Settings → Privacy & Security → **Open Anyway**. The installer above avoids this step.
 
 **Windows:** download the installer from [Releases](https://github.com/sgwork004-max/quire/releases/latest). If SmartScreen warns, choose More info → Run anyway.
 
