@@ -59,7 +59,7 @@ nav a{color:var(--text-2);text-decoration:none}nav a:hover{color:var(--text)}
 
 
 /* hero */
-.hero{padding:72px 0 0;text-align:center}
+.hero{padding:72px 0 64px;text-align:center;background:var(--paper)}
 .hero h1{font-size:clamp(42px,6.4vw,80px);margin:0 auto;max-width:13ch}
 .mark{position:relative;z-index:0;white-space:nowrap}
 .mark::after{content:"";position:absolute;left:-.04em;right:-.04em;bottom:.07em;height:.24em;background:var(--sun);z-index:-1;border-radius:2px}
@@ -230,9 +230,8 @@ footer .grow{flex:1}
   <p class="lede">The future of data representation is HTML. Quire puts all your HTML files in one place: editable, shareable and well organised.</p>
   <div class="install-box">
     <div class="os" role="tablist" aria-label="Operating system"><button type="button" role="tab" data-os="mac" aria-selected="true">Mac</button><button type="button" role="tab" data-os="win" aria-selected="false">Windows</button></div>
-    <div class="bigcmd"><code id="hero-cmd" data-mac="curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh" data-win="irm https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.ps1 | iex">curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh</code><button class="copy" type="button" data-copy="#hero-cmd">Copy</button></div>
+    <div class="bigcmd"><code id="hero-cmd" data-mac="curl -fsSL https://getquire.pages.dev/install.sh | sh" data-win="irm https://getquire.pages.dev/install.ps1 | iex">curl -fsSL https://getquire.pages.dev/install.sh | sh</code><button class="copy" type="button" data-copy="#hero-cmd">Copy</button></div>
     <p class="how1"><span class="is-mac">Paste in <b>Terminal</b> (⌘Space, type Terminal) and press Return.</span><span class="is-win">Paste in <b>PowerShell</b> (Start, type PowerShell) and press Enter.</span> Quire installs and opens.</p>
-    <p class="fine">Free and open source · <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg">Mac .dmg</a> · <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-windows-setup.exe">Windows .exe</a></p>
   </div>
   <figure class="shot rise"><div class="chrome" aria-hidden="true"><i></i><i></i><i></i></div><picture><source srcset="img/library-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/library.jpg" alt="The Quire library: live previews of dashboards, reports and landing pages, with folders and tags in the sidebar." width="2880" height="1800"></picture></figure>
   <p class="sources">Works with HTML from <b>ChatGPT</b><b>Claude</b><b>Gemini</b><b>Copilot</b><b>Cursor</b><b>any tool that saves .html</b></p>
@@ -298,12 +297,12 @@ footer .grow{flex:1}
   <div class="ways">
     <div class="way rise"><h3>Mac</h3>
       <p>Open Terminal (⌘Space, type Terminal), paste, press Return. No security warning.</p>
-      <div class="cmd"><code id="cmd-mac">curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh</code><button class="copy" type="button" data-copy="#cmd-mac">Copy</button></div>
+      <div class="cmd"><code id="cmd-mac">curl -fsSL https://getquire.pages.dev/install.sh | sh</code><button class="copy" type="button" data-copy="#cmd-mac">Copy</button></div>
       <p>Prefer the <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg">.dmg</a>? Drag Quire to Applications and open it. When macOS can't verify the app, click <b>Done</b>, then <b>System Settings › Privacy &amp; Security › Open Anyway</b>.</p>
     </div>
     <div class="way rise"><h3>Windows</h3>
       <p>Open PowerShell (Start, type PowerShell), paste, press Enter. No SmartScreen warning.</p>
-      <div class="cmd"><code id="cmd-win">irm https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.ps1 | iex</code><button class="copy" type="button" data-copy="#cmd-win">Copy</button></div>
+      <div class="cmd"><code id="cmd-win">irm https://getquire.pages.dev/install.ps1 | iex</code><button class="copy" type="button" data-copy="#cmd-win">Copy</button></div>
       <p>Prefer the <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-windows-setup.exe">.exe</a>? If SmartScreen appears, click <b>More info › Run anyway</b>. <a href="https://github.com/sgwork004-max/quire/releases">All versions</a></p>
     </div>
   </div>

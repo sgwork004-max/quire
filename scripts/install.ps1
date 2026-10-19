@@ -1,10 +1,11 @@
 # Installs (or updates) the latest Quire for Windows.
 #
-#   irm https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.ps1 | iex
+#   irm https://getquire.pages.dev/install.ps1 | iex
 #
 # Quire isn't signed with a paid Windows certificate. A browser download gets
 # a SmartScreen warning for that reason; a file fetched by PowerShell isn't
 # marked as downloaded from the internet, so the installer just runs.
+# Served from https://getquire.pages.dev/install.ps1 (apps/site/deploy.sh copies it there).
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 

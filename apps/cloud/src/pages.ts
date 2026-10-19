@@ -56,7 +56,7 @@ export function homePage(): string {
 <a class="btn" href="https://getquire.pages.dev">Visit the Quire website</a><a class="btn ghost" href="${REPO}/releases/latest">Download</a>
 <h2>Install on a Mac</h2>
 <p>Open Terminal and paste:</p>
-<pre>curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh</pre>
+<pre>curl -fsSL https://getquire.pages.dev/install.sh | sh</pre>
 <h2>Private by default</h2>
 <p>Your files stay on your computer. Only files you choose to share are uploaded, so the people you invite can view, comment on or edit them with you. <a href="/privacy">Privacy policy</a>.</p>`,
   );

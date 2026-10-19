@@ -25,7 +25,7 @@ AI tools now produce HTML all the time: dashboards, reports, one-pagers, prototy
 **Mac** (Apple Silicon and Intel), in Terminal:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh
+curl -fsSL https://getquire.pages.dev/install.sh | sh
 ```
 
 Or download the `.dmg`. Quire isn't signed with an Apple Developer ID, so macOS says it can't verify the app: click Done, then System Settings → Privacy & Security → **Open Anyway**. The installer above avoids this step.
