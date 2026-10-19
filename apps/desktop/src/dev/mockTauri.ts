@@ -86,7 +86,13 @@ mockIPC((cmd, args) => {
         hidden: 0,
       };
     case "library_query": {
-      const q = a.query as { view: string; folderId?: number; tagId?: number };
+      const q = a.query as { view: string; folderId?: number; tagId?: number; search?: string };
+      if (q.search?.trim()) {
+        const term = q.search.trim().toLowerCase();
+        return files
+          .filter((f) => f.title.toLowerCase().includes(term) || decodeURIComponent(f.url).toLowerCase().includes(term))
+          .map((f) => ({ ...f, snippet: f.title.toLowerCase().includes(term) ? null : `…sales, orders and \u0001${q.search}\u0002 across 6 stores…` }));
+      }
       if (q.view === "folder") return inFolder(q.folderId!);
       if (q.view === "tag") return files.filter((f) => f.tagIds.includes(q.tagId!));
       if (q.view === "starred") return files.filter((f) => f.starred);
@@ -103,8 +109,11 @@ mockIPC((cmd, args) => {
       const f = files.find((x) => x.path === a.path) ?? files[0];
       return { id: `doc${f.id}`, path: f.path, name: f.name, url: page(f.title), sizeBytes: f.sizeBytes, modifiedMs: f.modifiedMs };
     }
-    case "read_document":
-      return { content: "<!doctype html>\n<title>Sample</title>", modifiedMs: now };
+    case "read_document": {
+      const f = files.find((x) => `doc${x.id}` === a.id) ?? files[0];
+      const html = decodeURIComponent(f.url.slice(f.url.indexOf(",") + 1)).replace(/<!--$/, "");
+      return { content: html.replace(/></g, ">\n<"), modifiedMs: now };
+    }
     case "live_ticket":
       return new Promise(() => {}); // no live server in the preview; stay quietly "connecting"
     case "cloud_link_for_path":
@@ -124,6 +133,21 @@ mockIPC((cmd, args) => {
       return (a.options as { directory?: boolean })?.directory ? ["/Users/demo/Downloads"] : ["/Users/demo/Desktop/report.html"];
     case "import_scan":
       return files.slice(0, ((a.folders as string[]).length * 3 + (a.files as string[]).length) % 9).map((f) => ({ path: f.path, name: f.name, sizeBytes: f.sizeBytes, modifiedMs: f.modifiedMs }));
+    case "list_versions":
+      return [
+        { id: 3, createdMs: now - 60_000, updatedMs: now - 60_000, source: "edit", sizeBytes: 24800 },
+        { id: 2, createdMs: now - 26 * 3_600_000, updatedMs: now - 26 * 3_600_000, source: "disk", sizeBytes: 24100 },
+        { id: 1, createdMs: now - 5 * 86_400_000, updatedMs: now - 5 * 86_400_000, source: "opened", sizeBytes: 23900 },
+      ];
+    case "share_details":
+      return {
+        id: "d1", title: files[0].title, role: "owner", sizeBytes: files[0].sizeBytes,
+        owner: { name: "Riya Shah", email: "riya@example.com", image: null },
+        members: [
+          { email: "aarav@example.com", role: "editor", name: "Aarav K", image: null, pending: false },
+          { email: "meera@example.com", role: "commenter", name: "Meera Iyer", image: null, pending: false },
+        ],
+      };
     case "take_pending_opens":
       return [];
     case "cloud_api":
