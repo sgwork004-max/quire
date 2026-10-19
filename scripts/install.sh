@@ -11,7 +11,7 @@ set -eu
 REPO="sgwork004-max/quire"
 
 if [ "$(uname)" != "Darwin" ]; then
-  echo "This installer is for macOS. For Windows, get the installer from https://github.com/$REPO/releases/latest"
+  echo "This installer is for macOS. For Windows, run in PowerShell: irm https://raw.githubusercontent.com/$REPO/main/scripts/install.ps1 | iex"
   exit 1
 fi
 
