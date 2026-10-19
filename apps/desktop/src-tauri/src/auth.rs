@@ -79,6 +79,10 @@ impl Default for AuthState {
             http: reqwest::Client::builder()
                 .user_agent(concat!("Quire/", env!("CARGO_PKG_VERSION")))
                 .timeout(Duration::from_secs(20))
+                // Some networks can't reach one of Cloudflare's addresses (or have
+                // broken IPv6). The connect timeout is split across the resolved
+                // addresses, so a dead one costs a second or two, not the whole timeout.
+                .connect_timeout(Duration::from_secs(6))
                 .build()
                 .expect("http client"),
             current: Mutex::new(None),
@@ -264,5 +268,19 @@ async fn poll(app: AppHandle, attempt: u64, code: DeviceCode) {
     }
     if state.attempt.load(Ordering::SeqCst) == attempt {
         fail("The sign-in code expired. Try again.");
+    }
+}
+
+#[cfg(test)]
+mod network_tests {
+    /// Run with `cargo test -- --ignored`: needs the internet.
+    #[tokio::test]
+    #[ignore]
+    async fn reaches_quire_cloud_quickly() {
+        let state = super::AuthState::default();
+        let start = std::time::Instant::now();
+        let res = state.http.get(super::api_base()).send().await.expect("reach Quire Cloud");
+        assert!(res.status().is_success());
+        assert!(start.elapsed().as_secs() < 8, "took {:?}", start.elapsed());
     }
 }

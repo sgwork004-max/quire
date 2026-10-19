@@ -1,8 +1,9 @@
 import clsx from "clsx";
 import { useEffect, useRef } from "react";
-import { ArrowDownUp, Eye, EyeOff, FolderInput, FolderPlus, LayoutGrid, List, Search, Tag as TagIcon, Trash2, X } from "lucide-react";
+import { ArrowDownUp, Download, Eye, EyeOff, FolderInput, LayoutGrid, List, Search, Tag as TagIcon, Trash2, X } from "lucide-react";
 import { folderMenuItems, useLibrary, type LibraryView as View } from "../../store/library";
 import { useApp } from "../../store/app";
+import { useImport } from "../../store/import";
 import type { Overview, SortKey } from "../../lib/ipc";
 import { popupMenu } from "../../lib/menu";
 import { IconButton } from "../IconButton";
@@ -214,7 +215,6 @@ function SelectionBar({ ids }: { ids: number[] }) {
 }
 
 function EmptyView({ view, searching, search, overview }: { view: View; searching: boolean; search: string; overview: Overview | null }) {
-  const { addFolder } = useLibrary.getState();
   const { openDialog } = useApp.getState();
 
   if (searching) return <Message title={`No matches for “${search.trim()}”`} body="Search looks at file names, page titles and the text on each page." />;
@@ -228,15 +228,15 @@ function EmptyView({ view, searching, search, overview }: { view: View; searchin
           </div>
           <h2 className="font-display text-[24px] font-bold tracking-[-0.025em] text-ink">Your HTML, in one place</h2>
           <p className="mx-auto mt-1.5 max-w-[340px] text-[13px] leading-relaxed text-ink-2">
-            Add the folders where your reports, dashboards and pages live. Quire finds every HTML file, keeps them in sync and makes them searchable.
+            Bring in reports, dashboards and pages from Downloads, your Desktop or anywhere else. Quire only looks where you choose.
           </p>
           <div className="mt-5 flex justify-center gap-2">
             <button
               type="button"
-              onClick={() => void addFolder()}
+              onClick={() => useImport.getState().show()}
               className="inline-flex h-9 items-center gap-2 rounded-lg bg-accent px-4 text-[13px] font-medium text-accent-fg shadow-[0_1px_2px_rgb(0_0_0/0.12)] transition-colors hover:bg-accent-hover"
             >
-              <FolderPlus size={15} strokeWidth={2} /> Add folder
+              <Download size={15} strokeWidth={2} /> Import HTML
             </button>
             <button
               type="button"
@@ -246,7 +246,7 @@ function EmptyView({ view, searching, search, overview }: { view: View; searchin
               Open a file
             </button>
           </div>
-          <p className="mt-4 text-[12px] text-ink-3">Or drop files and folders anywhere in this window.</p>
+          <p className="mt-4 text-[12px] text-ink-3">Or drop HTML files anywhere in this window.</p>
         </div>
       </div>
     );

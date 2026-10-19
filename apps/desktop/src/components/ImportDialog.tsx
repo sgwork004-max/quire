@@ -89,16 +89,26 @@ function ImportFlow({ onboarding }: { onboarding: boolean }) {
   };
 
   /** Opens the system picker (at `start`, if given). Picking is macOS's permission, so no extra prompts. */
-  const pickFolders = async (start?: string) => {
-    const picked = await open({ directory: true, multiple: true, defaultPath: start, title: "Choose folders with HTML files" });
+  const pickFolders = async (start?: string, label?: string) => {
+    const picked = await open({
+      directory: true,
+      multiple: true,
+      defaultPath: start,
+      title: label ? `Click Open to import every HTML file in ${label}` : "Choose folders. Quire imports every HTML file inside.",
+    });
     const list = Array.isArray(picked) ? picked : picked ? [picked] : [];
     // A well-known folder (Downloads, Desktop) is where AI tools save files, so watch it by default.
     const watched = new Set([places?.downloads, places?.desktop]);
     addRows(list.map((p) => ({ key: `r${++seq}`, kind: "folder", label: baseName(p), paths: [p], found: null, watch: watched.has(p), folderId: null, tagIds: [] })));
   };
 
-  const pickFiles = async () => {
-    const picked = await open({ multiple: true, title: "Choose HTML files", filters: [{ name: "HTML", extensions: ["html", "htm"] }] });
+  const pickFiles = async (start?: string) => {
+    const picked = await open({
+      multiple: true,
+      defaultPath: start,
+      title: "Choose HTML files (⌘-click to pick several)",
+      filters: [{ name: "HTML", extensions: ["html", "htm", "xhtml"] }],
+    });
     const list = Array.isArray(picked) ? picked : picked ? [picked] : [];
     if (list.length)
       addRows([{ key: `r${++seq}`, kind: "files", label: list.length === 1 ? baseName(list[0]) : `${list.length} files`, paths: list, found: null, watch: false, folderId: null, tagIds: [] }]);
@@ -239,30 +249,36 @@ function ImportFlow({ onboarding }: { onboarding: boolean }) {
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-2 px-6 pt-4">
+            <div className="grid grid-cols-3 gap-2 px-6 pt-4">
               {quick.map((q) => (
-                <button
-                  key={q.label}
-                  type="button"
-                  title={q.hint}
-                  onClick={() => void pickFolders(q.path)}
-                  className="flex h-8 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-[12.5px] text-ink hover:bg-hover"
-                >
-                  <q.icon size={14} className="text-ink-3" /> {q.label}
-                </button>
+                <div key={q.label} className="rounded-xl border border-line-strong p-2.5" title={q.hint}>
+                  <div className="flex items-center gap-1.5 px-0.5 text-[12.5px] font-medium text-ink">
+                    <q.icon size={14} className="text-ink-3" /> {q.label}
+                  </div>
+                  <div className="mt-2 flex gap-1.5">
+                    <button type="button" onClick={() => void pickFolders(q.path, q.label)} className="h-7 flex-1 rounded-md bg-accent-soft text-[12px] font-medium text-ink hover:bg-active">
+                      Everything
+                    </button>
+                    <button type="button" onClick={() => void pickFiles(q.path)} className="h-7 flex-1 rounded-md border border-line-strong text-[12px] text-ink hover:bg-hover">
+                      Pick files
+                    </button>
+                  </div>
+                </div>
               ))}
+            </div>
+            <div className="flex gap-2 px-6 pt-2">
               <button type="button" onClick={() => void pickFolders()} className="flex h-8 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-[12.5px] text-ink hover:bg-hover">
                 <FolderOpen size={14} className="text-ink-3" /> Another folder…
               </button>
               <button type="button" onClick={() => void pickFiles()} className="flex h-8 items-center gap-1.5 rounded-lg border border-line-strong px-3 text-[12.5px] text-ink hover:bg-hover">
-                <FileCode2 size={14} className="text-ink-3" /> Files…
+                <FileCode2 size={14} className="text-ink-3" /> Files from anywhere…
               </button>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4">
               {rows.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-line-strong px-4 py-8 text-center text-[12.5px] leading-relaxed text-ink-3">
-                  Choose a place above. macOS opens it in a picker; click <b className="text-ink-2">Open</b> to let Quire look there.
+                  Choose a place above: import <b className="text-ink-2">everything</b> in it, or <b className="text-ink-2">pick files</b>. macOS shows its file picker; whatever you choose there is all Quire can see.
                 </div>
               ) : (
                 <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">

@@ -120,6 +120,7 @@ fn http() -> reqwest::Client {
     reqwest::Client::builder()
         .user_agent(concat!("Quire/", env!("CARGO_PKG_VERSION")))
         .timeout(Duration::from_secs(30))
+        .connect_timeout(Duration::from_secs(6))
         .build()
         .expect("http client")
 }
