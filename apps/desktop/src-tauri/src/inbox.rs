@@ -343,6 +343,14 @@ fn scan_dir(dir: &Path, depth: usize, out: &mut Vec<Candidate>) {
 pub fn import_scan(folders: Vec<String>, files: Vec<String>) -> Result<Vec<Candidate>, String> {
     let mut out = Vec::new();
     for f in &folders {
+        // Reading the folder is what makes macOS ask once for access to
+        // Downloads, Desktop or Documents. If the user said no, say so plainly.
+        if let Err(e) = std::fs::read_dir(f) {
+            if e.kind() == std::io::ErrorKind::PermissionDenied {
+                return Err(format!("NO_ACCESS:{f}"));
+            }
+            return Err(format!("Couldn't open {f}: {e}"));
+        }
         scan_dir(Path::new(f), SCAN_DEPTH, &mut out);
     }
     for f in &files {

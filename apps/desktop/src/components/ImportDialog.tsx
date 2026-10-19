@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Download, Eye, FileCode2, Folder, FolderOpen, Loader2, Monitor, Plus, Tag as TagIcon, X } from "lucide-react";
 import { errorMessage, ipc, type ImportCandidate, type ImportSource } from "../lib/ipc";
 import { popupMenu } from "../lib/menu";
@@ -48,6 +49,7 @@ function ImportFlow({ onboarding }: { onboarding: boolean }) {
   const [existing, setExisting] = useState<ImportSource[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [denied, setDenied] = useState<string | null>(null);
   const [result, setResult] = useState<{ added: number; updated: number; watching: number } | null>(null);
   const folders = overview?.folders ?? [];
   const tags = overview?.tags ?? [];
@@ -77,8 +79,14 @@ function ImportFlow({ onboarding }: { onboarding: boolean }) {
       .importScan(row.kind === "folder" ? row.paths : [], row.kind === "files" ? row.paths : [])
       .then((found) => update(row.key, { found }))
       .catch((e) => {
-        update(row.key, { found: [] });
-        setError(errorMessage(e));
+        const msg = errorMessage(e);
+        if (msg.startsWith("NO_ACCESS:")) {
+          setRows((all) => all.filter((r) => r.key !== row.key));
+          setDenied(row.label);
+        } else {
+          update(row.key, { found: [] });
+          setError(msg);
+        }
       });
 
   const addRows = (fresh: Row[]) => {
@@ -88,14 +96,15 @@ function ImportFlow({ onboarding }: { onboarding: boolean }) {
     add.forEach(scan);
   };
 
+  /** Everything in a known place (Downloads, Desktop…): no picker. macOS asks once, the first time. */
+  const addEverything = (path: string, label: string) => {
+    const watched = new Set([places?.downloads, places?.desktop]);
+    addRows([{ key: `r${++seq}`, kind: "folder", label, paths: [path], found: null, watch: watched.has(path), folderId: null, tagIds: [] }]);
+  };
+
   /** Opens the system picker (at `start`, if given). Picking is macOS's permission, so no extra prompts. */
-  const pickFolders = async (start?: string, label?: string) => {
-    const picked = await open({
-      directory: true,
-      multiple: true,
-      defaultPath: start,
-      title: label ? `Click Open to import every HTML file in ${label}` : "Choose folders. Quire imports every HTML file inside.",
-    });
+  const pickFolders = async () => {
+    const picked = await open({ directory: true, multiple: true, title: "Choose folders. Quire imports every HTML file inside." });
     const list = Array.isArray(picked) ? picked : picked ? [picked] : [];
     // A well-known folder (Downloads, Desktop) is where AI tools save files, so watch it by default.
     const watched = new Set([places?.downloads, places?.desktop]);
@@ -256,7 +265,7 @@ function ImportFlow({ onboarding }: { onboarding: boolean }) {
                     <q.icon size={14} className="text-ink-3" /> {q.label}
                   </div>
                   <div className="mt-2 flex gap-1.5">
-                    <button type="button" onClick={() => void pickFolders(q.path, q.label)} className="h-7 flex-1 rounded-md bg-accent-soft text-[12px] font-medium text-ink hover:bg-active">
+                    <button type="button" onClick={() => addEverything(q.path, q.label)} className="h-7 flex-1 rounded-md bg-accent-soft text-[12px] font-medium text-ink hover:bg-active">
                       Everything
                     </button>
                     <button type="button" onClick={() => void pickFiles(q.path)} className="h-7 flex-1 rounded-md border border-line-strong text-[12px] text-ink hover:bg-hover">
@@ -278,7 +287,7 @@ function ImportFlow({ onboarding }: { onboarding: boolean }) {
             <div className="min-h-0 flex-1 overflow-y-auto px-6 pt-4">
               {rows.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-line-strong px-4 py-8 text-center text-[12.5px] leading-relaxed text-ink-3">
-                  Choose a place above: import <b className="text-ink-2">everything</b> in it, or <b className="text-ink-2">pick files</b>. macOS shows its file picker; whatever you choose there is all Quire can see.
+                  Choose a place above: import <b className="text-ink-2">everything</b> in it, or <b className="text-ink-2">pick files</b>. The first time, macOS asks once to let Quire see that folder.
                 </div>
               ) : (
                 <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
@@ -329,6 +338,18 @@ function ImportFlow({ onboarding }: { onboarding: boolean }) {
                     );
                   })}
                 </ul>
+              )}
+              {denied && (
+                <div className="mt-3 flex items-center gap-3 rounded-lg bg-danger-soft px-3 py-2.5 text-[12.5px] text-ink">
+                  <span className="flex-1">macOS isn't letting Quire see {denied}. Turn it on under Files and Folders, then try again.</span>
+                  <button
+                    type="button"
+                    onClick={() => void openUrl("x-apple.systempreferences:com.apple.preference.security?Privacy_FilesAndFolders")}
+                    className="shrink-0 rounded-md border border-line-strong bg-surface px-2.5 py-1 text-[12px] hover:bg-hover"
+                  >
+                    Open Settings
+                  </button>
+                </div>
               )}
               {error && <p className="mt-3 text-[12px] text-danger">{error}</p>}
             </div>
