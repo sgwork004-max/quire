@@ -68,6 +68,10 @@ nav a{color:var(--text-2);text-decoration:none}nav a:hover{color:var(--text)}
 .fine{font-size:13px;color:var(--text-3);margin-top:12px}
 .shot{border-radius:12px;overflow:hidden;box-shadow:var(--shadow);background:var(--surface);border:1px solid var(--line)}
 .hero .shot{margin:52px auto 0;max-width:1080px}
+.shot video{display:block;width:100%;height:auto;aspect-ratio:1440/900}
+.b1 video{position:absolute;inset:20px;width:calc(100% - 40px);height:calc(100% - 40px);object-fit:contain;border-radius:8px}
+.sub{margin:14px 0 0;color:var(--text-2);font-size:17px}
+.kicker{margin:0 0 10px;color:var(--blue);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
 .chrome{display:flex;gap:6px;padding:10px 12px;background:var(--paper);border-bottom:1px solid var(--line)}
 .chrome i{width:11px;height:11px;border-radius:50%;background:#ff5f57}.chrome i+i{background:#febc2e}.chrome i+i+i{background:#28c840}
 .sources{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 22px;margin:44px auto 0;font-size:14px;color:var(--text-3)}
@@ -221,7 +225,7 @@ footer .legal{display:block;margin-top:14px;font-size:12px;color:var(--text-3);l
 
 <header id="top"><div class="wrap bar">
   <a class="brand" href="#"><svg aria-hidden="true"><use href="#logo"/></svg>Quire</a>
-  <nav aria-label="Main"><a href="#how">How it works</a><a href="#features">Features</a><a href="#share">Sharing</a><a href="#claude">Claude</a><a href="https://github.com/sgwork004-max/quire">GitHub</a></nav>
+  <nav aria-label="Main"><a href="#claude">AI edits</a><a href="#how">How it works</a><a href="#features">Features</a><a href="#share">Sharing</a><a href="https://github.com/sgwork004-max/quire">GitHub</a></nav>
   <a class="btn primary small" href="#download">Install</a>
 </div></header>
 
@@ -234,11 +238,25 @@ footer .legal{display:block;margin-top:14px;font-size:12px;color:var(--text-3);l
     <div class="bigcmd"><code id="hero-cmd" data-mac="curl -fsSL https://getquire.pages.dev/install.sh | sh" data-win="irm https://getquire.pages.dev/install.ps1 | iex">curl -fsSL https://getquire.pages.dev/install.sh | sh</code><button class="copy" type="button" data-copy="#hero-cmd">Copy</button></div>
     <p class="how1"><span class="is-mac">Paste in <b>Terminal</b> (⌘Space, type Terminal) and press Return.</span><span class="is-win">Paste in <b>PowerShell</b> (Start, type PowerShell) and press Enter.</span> Quire installs and opens.</p>
   </div>
-  <figure class="shot rise"><div class="chrome" aria-hidden="true"><i></i><i></i><i></i></div><picture><source srcset="img/library-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/library.jpg" alt="The Quire library: live previews of dashboards, reports and landing pages, with folders and tags in the sidebar." width="2880" height="1800"></picture></figure>
+  <figure class="shot rise"><div class="chrome" aria-hidden="true"><i></i><i></i><i></i></div><video data-clip="product" muted loop playsinline preload="auto" width="1440" height="900" poster="video/product-light.jpg" aria-label="The Quire library shows live previews of HTML files. A file is dragged into a Clients folder, then a dashboard opens full size and two collaborators join."></video></figure>
   <p class="sources">Works with HTML from <b>ChatGPT</b><b>Claude</b><b>Gemini</b><b>Copilot</b><b>Cursor</b><b>any tool that saves .html</b></p>
 </div></div>
 
-<section id="how"><div class="wrap">
+<section id="claude"><div class="wrap split flip">
+  <div class="chat rise" aria-label="Example conversation">
+    <div class="msg user">In Quire, add November to my Pune stores dashboard.</div>
+    <div class="msg ai">Done. I updated <b>Pune stores — October</b> in your Quire library.</div>
+    <div class="saved"><svg aria-hidden="true"><use href="#logo"/></svg><div>Pune stores — October.html <span>· earlier version saved</span></div></div>
+  </div>
+  <div class="rise">
+    <p class="kicker">Works with Claude</p>
+    <h2 class="display">Ask Claude to change it. Quire keeps up.</h2>
+    <p class="sub">No downloading, no re-importing, no <i>dashboard (3).html</i>.</p>
+    <ul class="points"><li>Claude edits the file in your library, not a copy.</li><li>If it's open in Quire, it refreshes as Claude saves.</li><li>Every change is kept as a version you can go back to.</li><li>Connect once from Settings. Works with the Claude app and Claude Code.</li></ul>
+  </div>
+</div></section>
+
+<section id="how" class="paper inks"><div class="wrap">
   <div class="head rise"><h2 class="display">From chat to library in a second.</h2></div>
   <div class="flow">
     <div class="tile rise"><div class="stage"><div class="bubble">Here's your sales dashboard.<div class="file">sales-dashboard.html<span class="dl">↓</span></div></div></div>
@@ -250,10 +268,10 @@ footer .legal{display:block;margin-top:14px;font-size:12px;color:var(--text-3);l
   </div>
 </div></section>
 
-<section id="features" class="paper inks"><div class="wrap">
+<section id="features"><div class="wrap">
   <div class="head rise"><h2 class="display">Built for working with HTML,<br class="wide"> not just opening it.</h2></div>
   <div class="bento">
-    <div class="tile b1 rise"><div class="stage"><picture><source srcset="img/grid-dark-2.jpg" media="(prefers-color-scheme: dark)"><img src="img/grid-2.jpg" alt="Live previews of eight HTML files in a grid."></picture></div><div class="cap"><b>See every page at a glance</b><span>Live previews, not file icons.</span></div></div>
+    <div class="tile b1 rise"><div class="stage"><video data-clip="organise" muted loop playsinline preload="metadata" width="1440" height="900" poster="video/organise-light.jpg" aria-label="Three files are selected in the Quire library and dragged into a Clients folder."></video></div><div class="cap"><b>See it all, sort it fast</b><span>Live previews. Drag into folders.</span></div></div>
     <div class="tile b2 rise"><div class="stage"><picture><source srcset="img/sidebar-dark-2.jpg" media="(prefers-color-scheme: dark)"><img src="img/sidebar-2.jpg" alt="Sidebar with folders, tags and Mac folders."></picture></div><div class="cap"><b>Folders and tags</b><span>Organise inside the app.</span></div></div>
     <div class="tile b3 rise"><div class="stage"><div class="search"><div class="box">⌕ footfall</div><div class="hit"><b>Pune stores — October</b>…orders and <mark>footfall</mark> across 6 stores</div></div></div><div class="cap"><b>Search inside pages</b><span>Names, titles and every word.</span></div></div>
     <div class="tile b4 rise"><div class="stage"><div class="hist"><div><span>Now</span><span class="by">Claude</span></div><div><span>Yesterday 6:40</span><span>You</span></div><div><span>Mon 11:02</span><span>Imported</span></div></div></div><div class="cap"><b>Every version kept</b><span>Restore anything.</span></div></div>
@@ -262,7 +280,7 @@ footer .legal{display:block;margin-top:14px;font-size:12px;color:var(--text-3);l
   </div>
 </div></section>
 
-<section id="share"><div class="wrap split">
+<section id="share" class="paper inks"><div class="wrap split">
   <div class="rise">
     <h2 class="display">Stop emailing HTML attachments.</h2>
     <ul class="points"><li>Share one file, not a folder.</li><li>Edit together, live.</li><li>Comments pin to the exact chart.</li></ul>
@@ -272,17 +290,6 @@ footer .legal{display:block;margin-top:14px;font-size:12px;color:var(--text-3);l
   <figure class="shot rise"><div class="chrome" aria-hidden="true"><i></i><i></i><i></i></div><picture><source srcset="img/file-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/file.jpg" alt="A shared dashboard open in Quire with two collaborators present." width="2880" height="1800"></picture></figure>
 </div></section>
 
-<section id="claude" class="paper inks"><div class="wrap split flip">
-  <div class="chat rise" aria-label="Example conversation">
-    <div class="msg user">Make a dashboard from these October numbers and save it to Quire.</div>
-    <div class="msg ai">Done: <b>Pune stores — October</b> is open in Quire.</div>
-    <div class="saved"><svg aria-hidden="true"><use href="#logo"/></svg><div>Pune stores — October.html <span>· saved to Quire</span></div></div>
-  </div>
-  <div class="rise">
-    <h2 class="display">Claude saves straight to Quire.</h2>
-    <ul class="points"><li>One click to connect, in Settings.</li><li>Claude finds and updates the same file.</li><li>Claude app and Claude Code.</li></ul>
-  </div>
-</div></section>
 
 <section id="privacy"><div class="wrap">
   <div class="head c rise"><h2 class="display">Private unless you share.</h2></div>
@@ -356,6 +363,22 @@ footer .legal{display:block;margin-top:14px;font-size:12px;color:var(--text-3);l
       } catch {}
     }),
   );
+  // Clips: light or dark to match the visitor, still posters if they prefer less motion.
+  (() => {
+    const dark = matchMedia("(prefers-color-scheme: dark)");
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pick = () => {
+      const s = dark.matches ? "dark" : "light";
+      document.querySelectorAll("video[data-clip]").forEach((v) => {
+        v.poster = `video/${v.dataset.clip}-${s}.jpg`;
+        if (still) return;
+        v.src = `video/${v.dataset.clip}-${s}.mp4`;
+        v.play().catch(() => {});
+      });
+    };
+    pick();
+    dark.addEventListener("change", pick);
+  })();
 </script>
 </body>
 </html>
