@@ -2,7 +2,7 @@
 //! handles them. Using the native menu means shortcuts keep working even when
 //! focus is inside a document's iframe.
 
-use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder};
+use tauri::menu::{Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder, HELP_SUBMENU_ID, WINDOW_SUBMENU_ID};
 use tauri::{AppHandle, Runtime};
 
 pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
@@ -83,7 +83,10 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
         .fullscreen()
         .build()?;
 
-    let mut window = SubmenuBuilder::new(app, "Window")
+    // The special ids make macOS treat these as the app's Window and Help menus:
+    // Window gains the system Fill, Center and tiling items (fn+Ctrl+F, fn+Ctrl+C),
+    // Help gains the menu search field.
+    let mut window = SubmenuBuilder::with_id(app, WINDOW_SUBMENU_ID, "Window")
         .minimize()
         .maximize()
         .separator()
@@ -99,7 +102,7 @@ pub fn build<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     }
     let window = window.separator().bring_all_to_front().build()?;
 
-    let help = SubmenuBuilder::new(app, "Help")
+    let help = SubmenuBuilder::with_id(app, HELP_SUBMENU_ID, "Help")
         .item(&MenuItemBuilder::with_id("help", "Quire Help").build(app)?)
         .item(&MenuItemBuilder::with_id("report-issue", "Report an Issue…").build(app)?)
         .build()?;

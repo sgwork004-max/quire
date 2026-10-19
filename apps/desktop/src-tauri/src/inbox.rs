@@ -239,7 +239,7 @@ pub fn start(app: &AppHandle) {
         return;
     }
     let app = app.clone();
-    std::thread::spawn(move || {
+    let _ = std::thread::Builder::new().name("quire-import".into()).spawn(move || {
         if let Err(e) = start_watching(&app) {
             eprintln!("import: {e}");
         }

@@ -16,6 +16,7 @@ mod protocol;
 mod scan;
 mod versions;
 mod watcher;
+mod crash_log;
 
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
@@ -78,6 +79,7 @@ fn show_main(app: &AppHandle) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    crash_log::install();
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -93,7 +95,7 @@ pub fn run() {
         .manage(inbox::Inbox::default())
         .register_asynchronous_uri_scheme_protocol(documents::SCHEME, |ctx, request, responder| {
             let app = ctx.app_handle().clone();
-            std::thread::spawn(move || {
+            let _ = std::thread::Builder::new().name("quire-protocol".into()).spawn(move || {
                 let registry = app.state::<documents::Registry>();
                 responder.respond(protocol::handle(&registry, &request));
             });

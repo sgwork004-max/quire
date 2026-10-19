@@ -7,9 +7,10 @@ const PAGE_HEIGHT = 800;
 const urls = new Map<string, string>();
 
 /**
- * A live, scaled-down render of the page. Only mounted while on screen so a
- * big library stays light. Runs in the same sandbox as the viewer, with fewer
- * permissions (no forms, popups or dialogs).
+ * A live, scaled-down render of the page. Mounted as it nears the screen and
+ * kept until it is far away, so scrolling back and forth doesn't blank and
+ * reload it, while a big library still stays light. Runs in the same sandbox
+ * as the viewer, with fewer permissions (no forms, popups or dialogs).
  */
 export function Thumbnail({ path, version, disabled }: { path: string; version: number; disabled?: boolean }) {
   const box = useRef<HTMLDivElement>(null);
@@ -22,12 +23,15 @@ export function Thumbnail({ path, version, disabled }: { path: string; version: 
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { rootMargin: "300px" });
+    const near = new IntersectionObserver(([e]) => e.isIntersecting && setVisible(true), { rootMargin: "800px" });
+    const far = new IntersectionObserver(([e]) => !e.isIntersecting && setVisible(false), { rootMargin: "4000px" });
     const ro = new ResizeObserver(([e]) => setScale(e.contentRect.width / PAGE_WIDTH));
-    io.observe(el);
+    near.observe(el);
+    far.observe(el);
     ro.observe(el);
     return () => {
-      io.disconnect();
+      near.disconnect();
+      far.disconnect();
       ro.disconnect();
     };
   }, []);
@@ -48,7 +52,7 @@ export function Thumbnail({ path, version, disabled }: { path: string; version: 
   }, [visible, url, path, disabled]);
 
   const src = url ? `${url}?t=${version}` : null;
-  useEffect(() => setLoaded(false), [src]);
+  useEffect(() => setLoaded(false), [src, visible]);
 
   return (
     <div ref={box} className="relative aspect-[16/10] w-full overflow-hidden bg-white">

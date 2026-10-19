@@ -1,6 +1,6 @@
 [package]
 name = "quire"
-version = "0.2.7"
+version = "0.2.8"
 description = "Quire — view, organise, edit and share HTML"
 authors = ["Quire contributors"]
 license = "AGPL-3.0-only"
@@ -48,5 +48,4 @@ tauri-plugin-process = "2"
 codegen-units = 1
 lto = true
 opt-level = 3
-panic = "abort"
 strip = true

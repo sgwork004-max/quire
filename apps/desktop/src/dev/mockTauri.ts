@@ -44,10 +44,11 @@ const files = SAMPLES.map(([name, url], i) => ({
   starred: i === 2,
   trashedMs: null,
   tagIds: i === 0 || i === 4 ? [1] : i === 2 ? [2] : [],
-  folderId: i < 3 ? 1 : null,
+  folderId: i === 2 ? 2 : i >= 6 ? 3 : (null as number | null),
   snippet: null,
   url,
 }));
+const inFolder = (id: number) => files.filter((f) => f.folderId === id);
 const page = (title: string) => files.find((f) => f.title === title)?.url ?? files[0].url;
 
 // ?open=1 opens the first file with collaborators present, for screenshots.
@@ -62,6 +63,9 @@ if (new URLSearchParams(location.search).has("open")) {
   }, 600);
 }
 
+// For scripted recordings (promo clips): the same store instance the app uses.
+void import("../store/app").then(({ useApp }) => Object.assign(window, { __quireApp: useApp }));
+
 mockWindows("main");
 mockIPC((cmd, args) => {
   const a = args as Record<string, unknown>;
@@ -69,7 +73,11 @@ mockIPC((cmd, args) => {
     case "library_overview":
       return {
         locations: [{ id: 1, path: "/Users/demo/Quire", name: "Quire", count: files.length }],
-        folders: [{ id: 1, name: "Clients", count: 3 }, { id: 2, name: "Board meetings", count: 1 }, { id: 3, name: "Experiments", count: 2 }],
+        folders: [
+          { id: 1, name: "Clients", count: inFolder(1).length },
+          { id: 2, name: "Board meetings", count: inFolder(2).length },
+          { id: 3, name: "Experiments", count: inFolder(3).length },
+        ],
         tags: [{ id: 1, name: "Weekly", color: "#c8372d", count: 2 }, { id: 2, name: "Board", color: "#1e9bb0", count: 1 }],
         all: files.length,
         starred: 1,
@@ -77,8 +85,16 @@ mockIPC((cmd, args) => {
         trash: 0,
         hidden: 0,
       };
-    case "library_query":
+    case "library_query": {
+      const q = a.query as { view: string; folderId?: number; tagId?: number };
+      if (q.view === "folder") return inFolder(q.folderId!);
+      if (q.view === "tag") return files.filter((f) => f.tagIds.includes(q.tagId!));
+      if (q.view === "starred") return files.filter((f) => f.starred);
       return files;
+    }
+    case "set_files_folder":
+      for (const f of files) if ((a.ids as number[]).includes(f.id)) f.folderId = a.folder as number | null;
+      return null;
     case "preview_url": {
       const f = files.find((x) => x.path === a.path);
       return page(f?.title ?? "");

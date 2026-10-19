@@ -126,7 +126,7 @@ impl LocationWatchers {
 /// Scans and starts watching a location on a background thread.
 pub fn start_location(app: &AppHandle, location_id: i64, root: PathBuf) {
     let app = app.clone();
-    std::thread::spawn(move || {
+    let _ = std::thread::Builder::new().name("quire-scan".into()).spawn(move || {
         let db = app.state::<Db>();
         if let Err(e) = scan_location(&db, location_id, &root) {
             eprintln!("scan {}: {e}", root.display());
