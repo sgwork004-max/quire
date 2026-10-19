@@ -257,6 +257,18 @@ function SettingsPanel() {
                 Report an issue
               </button>
             </div>
+            <p className="mt-2.5 flex flex-wrap gap-x-3 text-[11.5px] text-ink-3">
+              {[
+                ["Terms", "https://quire-cloud.quire-cloud.workers.dev/terms"],
+                ["Privacy", "https://quire-cloud.quire-cloud.workers.dev/privacy"],
+                ["Licences", "https://github.com/sgwork004-max/quire/blob/main/THIRD_PARTY_LICENSES.md"],
+                ["Contact", "mailto:sg.work004+quire@gmail.com?subject=Quire"],
+              ].map(([label, url]) => (
+                <button key={label} type="button" onClick={() => void openUrl(url)} className="underline-offset-2 hover:text-ink hover:underline">
+                  {label}
+                </button>
+              ))}
+            </p>
           </Row>
         </div>
       </div>

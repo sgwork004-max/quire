@@ -83,3 +83,9 @@ Found a security issue? Please email the maintainers instead of opening a public
 ## License
 
 [AGPL-3.0](LICENSE). You can use, modify and self-host Quire freely. If you run a modified version as a service, you must publish your changes.
+
+## Legal
+
+[Terms](https://quire-cloud.quire-cloud.workers.dev/terms) · [Privacy](https://quire-cloud.quire-cloud.workers.dev/privacy) · [Third-party licences](THIRD_PARTY_LICENSES.md) · Contact: sg.work004+quire@gmail.com
+
+Quire is an independent open-source project, not affiliated with or endorsed by OpenAI, Anthropic, Google, Microsoft or Anysphere. Product names are trademarks of their owners.

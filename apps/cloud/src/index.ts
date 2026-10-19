@@ -3,7 +3,7 @@ import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
 import { createAuth, type Auth } from "./auth";
 import { emailEnabled, googleEnabled, type Env } from "./env";
-import { devicePage, homePage, privacyPage } from "./pages";
+import { devicePage, homePage, privacyPage, termsPage } from "./pages";
 import { live, sharing } from "./sharing";
 import { comments, notifications } from "./comments";
 
@@ -35,6 +35,7 @@ app.use(
 
 app.get("/", (c) => (c.req.header("accept")?.includes("text/html") ? c.html(homePage()) : c.json({ name: "Quire Cloud", ok: true })));
 app.get("/privacy", (c) => c.html(privacyPage()));
+app.get("/terms", (c) => c.html(termsPage()));
 
 app.on(["GET", "POST"], "/api/auth/*", (c) => c.get("auth").handler(c.req.raw));
 

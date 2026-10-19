@@ -40,11 +40,16 @@ const LOGO = `<svg class="logo" viewBox="0 0 1000 1000" aria-hidden="true"><rect
 <path d="${Q}" fill="#ffb511" transform="translate(278 211) scale(0.92)"/><path d="${Q}" fill="#eef0f3" transform="translate(259 196) scale(0.92)"/></svg>`;
 
 const REPO = "https://github.com/sgwork004-max/quire";
+/** Where users reach a person: data requests, abuse reports, grievances. */
+export const CONTACT = "sg.work004+quire@gmail.com";
+const mail = (subject: string, label = CONTACT) => `<a href="mailto:${CONTACT}?subject=${encodeURIComponent(subject)}">${label}</a>`;
+const NOT_AFFILIATED =
+  "Quire is an independent open-source project, not affiliated with or endorsed by OpenAI, Anthropic, Google, Microsoft or Anysphere. ChatGPT, Claude, Gemini, Copilot and Cursor are trademarks of their owners.";
 
 function docPage(title: string, body: string): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${title}</title><style>${STYLE}</style></head><body><main class="doc">${LOGO}${body}
-<footer><a href="/">Quire</a> · <a href="/privacy">Privacy</a> · <a href="${REPO}">Source code</a> · <a href="${REPO}/issues">Contact</a></footer></main></body></html>`;
+<footer><a href="/">Quire</a> · <a href="/terms">Terms</a> · <a href="/privacy">Privacy</a> · <a href="${REPO}">Source code</a> · ${mail("Quire", "Contact")} · ${mail("Report abuse on Quire", "Report abuse")}<br><br>${NOT_AFFILIATED}</footer></main></body></html>`;
 }
 
 /** Public home page (also the app's home page for Google sign-in). */
@@ -67,26 +72,66 @@ export function privacyPage(): string {
   return docPage(
     "Quire privacy policy",
     `<h1>Privacy policy</h1>
-<p>Last updated 18 October 2026.</p>
+<p>Last updated 19 October 2026.</p>
 <p class="lede">Quire works on your computer. Nothing leaves it unless you sign in and share a file.</p>
 <h2>Files on your computer</h2>
-<p>The HTML files in your Quire library, your folders, tags and version history stay on your computer. Quire does not upload them, scan them or send them anywhere.</p>
+<p>The HTML files in your Quire library, your folders, tags and version history stay on your computer. Quire only reads the folders and files you choose to import, and does not upload them, scan them for us, or send them anywhere.</p>
 <h2>When you sign in</h2>
-<p>Signing in with Google is only needed to share. We receive and store your name, email address and profile picture, and keep a session so you stay signed in. We do not get access to your Google account, email, contacts or files.</p>
+<p>Signing in with Google is only needed to share and comment. We receive and store your name, email address and profile picture, and keep a session so you stay signed in. We do not get access to your Google account, email, contacts or files.</p>
 <h2>When you share a file</h2>
 <ul>
 <li>We store the shared file, the images and other files it uses, its earlier versions, the comments on it, and the email addresses and roles of the people you invite.</li>
 <li>Only you and the people you invite can open it.</li>
 <li>When you stop sharing a file, we delete it and its data from our servers.</li>
 </ul>
+<h2>Why we use your data</h2>
+<p>Only to run Quire Cloud for you: to sign you in, store what you share, show it to the people you invited, and send comment notifications inside the app. You consent to this by signing in; you can withdraw it at any time by deleting your account.</p>
 <h2>Where it is stored</h2>
-<p>Quire Cloud runs on Cloudflare (Workers, D1 and R2). Data is encrypted in transit.</p>
+<p>Quire Cloud runs on Cloudflare (Workers, D1 and R2), which processes data for us on servers that may be outside your country. Data is encrypted in transit.</p>
 <h2>What we don't do</h2>
 <p>No ads, no tracking, no analytics, and we never sell or rent your data. We don't send you marketing email.</p>
-<h2>Deleting your account</h2>
-<p>Stop sharing your files and sign out to remove your shared data. To delete your account entirely, open an issue at <a href="${REPO}/issues">${REPO.replace("https://", "")}/issues</a> and we will delete it.</p>
-<h2>Changes and contact</h2>
-<p>If this policy changes, we update this page. Questions: <a href="${REPO}/issues">open an issue</a>. Quire is open source, so you can read exactly what the app and the cloud do.</p>`,
+<h2>Your rights</h2>
+<p>You can ask to see, correct or delete your data, or to delete your account, by emailing ${mail("Quire data request")}. We reply within 7 days and complete deletion within 30 days. Stopping sharing on a file deletes that file from our servers straight away.</p>
+<h2>Age</h2>
+<p>Quire Cloud is for people aged 18 and over.</p>
+<h2>If something goes wrong</h2>
+<p>If a security incident affects your data, we will tell you by email, and the relevant authorities where the law requires it, as soon as we can.</p>
+<h2>Grievance officer</h2>
+<p>Shardul Gupta, ${mail("Quire grievance")}. Complaints are acknowledged within 24 hours and resolved within 15 days.</p>
+<h2>Changes</h2>
+<p>If this policy changes, we update this page and the date above. Quire is open source, so you can read exactly what the app and the cloud do.</p>`,
+  );
+}
+
+/** Terms of Service. Plain language; keep in step with what the product does. */
+export function termsPage(): string {
+  return docPage(
+    "Quire terms of service",
+    `<h1>Terms of service</h1>
+<p>Last updated 19 October 2026.</p>
+<p class="lede">Quire is free, open-source software. These terms cover the Quire apps and Quire Cloud, the service that lets you share files with other people.</p>
+<h2>Using Quire</h2>
+<p>You can use the Quire apps freely under their open-source licence (AGPL-3.0). To use Quire Cloud you need a Google account and must be 18 or older. Keep your account to yourself; you're responsible for what happens under it.</p>
+<h2>Your content is yours</h2>
+<p>You own the files you put in Quire and share through it. By sharing a file you let us store it and show it to the people you invited, only to run the service. We don't claim any other rights to it.</p>
+<h2>What you must not share</h2>
+<ul>
+<li>Phishing pages, fake login or payment forms, malware, or anything designed to trick or harm people.</li>
+<li>Content that is illegal, infringes someone else's rights, or that you don't have permission to share.</li>
+<li>Content that harasses, threatens or exploits anyone, or sexual content involving minors.</li>
+<li>Anything that attacks, overloads or tries to get around the limits or security of Quire Cloud.</li>
+</ul>
+<p>We may remove content or suspend accounts that break these rules, and we cooperate with valid legal requests. Report abuse to ${mail("Report abuse on Quire")}.</p>
+<h2>Limits and changes</h2>
+<p>Quire Cloud is free with limits (currently 25 MB of shared files per account) that may change. We may change or stop the service; if we stop it, we'll give notice so you can keep your files. Your files on your computer are never affected.</p>
+<h2>No warranty</h2>
+<p>Quire is provided “as is”, without warranties of any kind. Keep your own copies of anything important. To the extent the law allows, we aren't liable for lost data, lost profits or indirect damages, and our total liability is limited to ₹1,000 (about US$12).</p>
+<h2>Ending</h2>
+<p>You can stop using Quire and delete your account at any time by emailing ${mail("Delete my Quire account")}. We may end accounts that break these terms.</p>
+<h2>Law and contact</h2>
+<p>These terms are governed by the laws of India. Questions or complaints: ${mail("Quire terms")}. Grievance officer: Shardul Gupta, same address.</p>
+<h2>Other services</h2>
+<p>${NOT_AFFILIATED}</p>`,
   );
 }
 
@@ -111,6 +156,7 @@ export function devicePage(opts: { userCode: string; google: boolean; email: boo
 <section id="sign-in" class="hidden">
   <h1>Sign in to Quire</h1><p>Use the account you want on this Mac.</p>
   ${opts.google ? `<button id="google" class="${opts.email ? "secondary" : "primary"}">Continue with Google</button>` : ""}
+  <p class="muted">By continuing you agree to Quire's <a href="/terms" target="_blank">Terms</a> and <a href="/privacy" target="_blank">Privacy policy</a>. Quire Cloud is for people 18 and over.</p>
   ${opts.google && opts.email ? `<div class="or">or</div>` : ""}
   ${!opts.google && !opts.email ? `<p>Sign-in isn't set up on this server yet.</p>` : ""}
   <form id="email-form" class="${opts.email ? "" : "hidden"}"><label for="email">Email</label><input id="email" type="email" autocomplete="email" placeholder="you@company.com" required>
