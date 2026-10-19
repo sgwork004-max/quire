@@ -48,6 +48,10 @@ const files = SAMPLES.map(([name, url], i) => ({
   snippet: null,
   url,
 }));
+const members: { email: string; role: string; name: string | null; image: null; pending: boolean }[] = [
+  { email: "aarav@example.com", role: "editor", name: "Aarav K", image: null, pending: false },
+  { email: "meera@example.com", role: "commenter", name: "Meera Iyer", image: null, pending: false },
+];
 const inFolder = (id: number) => files.filter((f) => f.folderId === id);
 const page = (title: string) => files.find((f) => f.title === title)?.url ?? files[0].url;
 
@@ -135,23 +139,43 @@ mockIPC((cmd, args) => {
       return files.slice(0, ((a.folders as string[]).length * 3 + (a.files as string[]).length) % 9).map((f) => ({ path: f.path, name: f.name, sizeBytes: f.sizeBytes, modifiedMs: f.modifiedMs }));
     case "list_versions":
       return [
-        { id: 3, createdMs: now - 60_000, updatedMs: now - 60_000, source: "edit", sizeBytes: 24800 },
-        { id: 2, createdMs: now - 26 * 3_600_000, updatedMs: now - 26 * 3_600_000, source: "disk", sizeBytes: 24100 },
+        { id: 3, createdMs: Date.now(), updatedMs: Date.now(), source: "disk", sizeBytes: 24800 },
+        { id: 2, createdMs: now - 26 * 3_600_000, updatedMs: now - 26 * 3_600_000, source: "edit", sizeBytes: 24100 },
         { id: 1, createdMs: now - 5 * 86_400_000, updatedMs: now - 5 * 86_400_000, source: "opened", sizeBytes: 23900 },
       ];
     case "share_details":
       return {
         id: "d1", title: files[0].title, role: "owner", sizeBytes: files[0].sizeBytes,
         owner: { name: "Riya Shah", email: "riya@example.com", image: null },
-        members: [
-          { email: "aarav@example.com", role: "editor", name: "Aarav K", image: null, pending: false },
-          { email: "meera@example.com", role: "commenter", name: "Meera Iyer", image: null, pending: false },
-        ],
+        members,
       };
     case "take_pending_opens":
       return [];
     case "cloud_api":
+      if (String(a.path).includes("/comments")) {
+        const person = (id: string, name: string, email: string) => ({ id, name, email, image: null });
+        return {
+          canComment: true,
+          people: [{ email: "aarav@example.com", name: "Aarav K" }, { email: "meera@example.com", name: "Meera Iyer" }],
+          threads: [
+            {
+              id: "t1", body: "Koregaon Park jumped 18%. Is that the new store layout?", createdAt: now - 40 * 60_000, updatedAt: now - 40 * 60_000,
+              author: person("u2", "Aarav K", "aarav@example.com"), resolved: false,
+              anchor: null,
+              replies: [{ id: "c2", body: "Yes, rolled out on 3 Oct. Adding a note to the chart.", createdAt: now - 12 * 60_000, updatedAt: now - 12 * 60_000, author: person("u1", "Riya Shah", "riya@example.com") }],
+            },
+            {
+              id: "t3", body: "Can we split footfall by weekday vs weekend?", createdAt: now - 5 * 60_000, updatedAt: now - 5 * 60_000,
+              author: person("u3", "Meera Iyer", "meera@example.com"), resolved: false,
+              anchor: null, replies: [],
+            },
+          ],
+        };
+      }
       return { notifications: [], unread: 0 };
+    case "share_invite":
+      members.push({ email: a.email as string, role: a.role as string, name: null, image: null, pending: true });
+      return { members };
     case "plugin:event|listen":
       return 1;
     default:
