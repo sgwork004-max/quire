@@ -13,6 +13,12 @@ Quire is built in phases. Each phase ships something usable.
 | 6. Power features | MCP server + `quire` CLI (Claude creates, finds and updates HTML in your library), live data from CSV/JSON/Google Sheets links, export to PDF and single-file HTML | Done |
 | 7. Launch | Abuse prevention for public pages, security review, self-host Docker image, docs site, billing for the hosted plan | |
 
+## Next release
+
+Collected here and shipped together as one release, now that Quire is live.
+
+- Find in page (⌘F) for the open document: a search bar that highlights every match and steps through them with Return / ⇧Return.
+
 ## Decisions
 
 - **Desktop first** with Tauri 2. A lightweight web viewer is added in Phase 3 so people receiving a link do not need to install anything.
