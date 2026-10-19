@@ -3,6 +3,7 @@
 // into the app: main.tsx imports it only under `import.meta.env.DEV` when
 // Tauri's IPC is missing.
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
+import { VIVID, asDataUrl, launchDashboard } from "./vividSamples";
 
 const now = Date.now();
 const doc = (body: string, bg = "#fff", color = "#1f2937") =>
@@ -31,7 +32,9 @@ const SAMPLES: [string, string][] = [
   ["Pricing experiments", doc(`<div style="padding:32px;text-align:center"><h1 style="font-size:28px;margin:0 0 20px">Simple pricing</h1><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">${["Starter|₹0", "Team|₹499", "Business|₹1,499"].map((p, i) => `<div style="border:${i === 1 ? "2px solid #7c3aed" : "1px solid #e5e7eb"};border-radius:14px;padding:22px"><div style="font-weight:600">${p.split("|")[0]}</div><div style="font-size:30px;font-weight:700;margin:8px 0">${p.split("|")[1]}</div><div style="font-size:12px;opacity:.6">per user / month</div></div>`).join("")}</div></div>`)],
 ];
 
-const files = SAMPLES.map(([name, url], i) => ({
+// ?demo=vivid swaps in a bolder library for promo recordings.
+const VIVID_DEMO = new URLSearchParams(location.search).get("demo") === "vivid";
+const files = (VIVID_DEMO ? VIVID : SAMPLES).map(([name, url], i) => ({
   id: i + 1,
   path: `/Users/demo/Quire/${name}.html`,
   name: `${name}.html`,
@@ -69,6 +72,8 @@ if (new URLSearchParams(location.search).has("open")) {
 
 // For scripted recordings (promo clips): the same store instance the app uses.
 void import("../store/app").then(({ useApp }) => Object.assign(window, { __quireApp: useApp }));
+void import("../store/library").then(({ useLibrary }) => Object.assign(window, { __quireLibrary: useLibrary }));
+Object.assign(window, { __quireDemo: { launchDashboard: (extra: boolean) => asDataUrl(launchDashboard(extra)) } });
 
 mockWindows("main");
 mockIPC((cmd, args) => {
