@@ -188,6 +188,25 @@ button {
   .paper::before { mix-blend-mode: screen; filter: invert(1); }
 }
 
+/* A file being dragged onto a sidebar folder or tag (lib/fileDrag.ts). */
+.file-drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  pointer-events: none;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font: 600 12px -apple-system, system-ui, sans-serif;
+  box-shadow: 0 6px 18px -6px rgb(0 0 0 / 0.35);
+}
+body.dragging-files,
+body.dragging-files * {
+  cursor: grabbing !important;
+}
+
 /* Thin scrollbars inked to the palette. */
 * {
   scrollbar-color: var(--border-strong) transparent;

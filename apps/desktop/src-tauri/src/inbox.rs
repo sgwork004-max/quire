@@ -1,28 +1,51 @@
-//! Importing HTML into Quire. HTML that AI chats (ChatGPT, claude.ai,
-//! Gemini…) save to ~/Downloads, and HTML saved to ~/Desktop, is copied into
-//! ~/Quire/Inbox automatically. A re-download of the same file
-//! (`report (1).html`) updates `report.html` in Quire instead of adding a
-//! copy, with the old content kept in version history. Manual imports pick
-//! their sources (folders or files) and destination each time. Source files
-//! are never changed.
+//! Importing HTML into Quire.
+//!
+//! Nothing is read or watched until the user chooses it: in onboarding or the
+//! Import window they pick folders (Downloads, Desktop, anything) and files
+//! with the system file picker, which macOS treats as consent, so there are no
+//! extra permission prompts. Chosen folders can also be watched ("sources"):
+//! new HTML saved there afterwards is copied into ~/Quire/Inbox and filed into
+//! the source's Quire folder and tags. A re-download of the same file
+//! (`report (1).html`) updates `report.html` instead of adding a copy, with
+//! the old content kept in version history. Source files are never changed.
 
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::Duration;
 
+use notify::event::ModifyKind;
 use notify::{EventKind, RecommendedWatcher, RecursiveMode, Watcher};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::db::{now_ms, set_setting, setting, Db};
 use crate::documents::is_html;
 use crate::{commands, library, scan};
 
-const ENABLED: &str = "inbox.enabled";
-/// Downloads older than this were there before import was switched on.
-const SINCE: &str = "inbox.since_ms";
+/// Watched sources, as JSON (see `Source`).
+const SOURCES: &str = "inbox.sources";
 const MAX_BYTES: u64 = 20 * 1024 * 1024;
+
+/// A folder watched for new HTML, and where its imports are filed.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Source {
+    pub path: String,
+    /// Quire folder new files go into.
+    #[serde(default)]
+    pub folder_id: Option<i64>,
+    /// Tags new files get.
+    #[serde(default)]
+    pub tag_ids: Vec<i64>,
+    /// Only files saved after this are imported automatically.
+    #[serde(default)]
+    pub since_ms: i64,
+}
+
+pub fn sources(db: &Db) -> Vec<Source> {
+    setting(&db.conn(), SOURCES).and_then(|v| serde_json::from_str(&v).ok()).unwrap_or_default()
+}
 
 #[derive(Default)]
 pub struct Inbox {
@@ -50,11 +73,6 @@ pub fn downloads_dir() -> Option<PathBuf> {
 
 pub fn desktop_dir() -> Option<PathBuf> {
     home().map(|h| h.join("Desktop"))
-}
-
-/// Folders watched for new HTML while automatic import is on.
-fn watched_dirs() -> Vec<PathBuf> {
-    [downloads_dir(), desktop_dir()].into_iter().flatten().filter(|d| d.is_dir()).collect()
 }
 
 pub fn inbox_dir() -> Option<PathBuf> {
@@ -123,6 +141,19 @@ fn import_into(app: &AppHandle, download: &Path, dir: &Path) -> Option<Imported>
     Some(Imported { path: target.to_string_lossy().into_owned(), name: target_name, updated: existed })
 }
 
+/// Puts an imported file into a Quire folder and tags.
+fn file_into(db: &Db, path: &str, folder: Option<i64>, tags: &[i64]) -> Option<i64> {
+    let conn = db.conn();
+    let id: i64 = conn.query_row("SELECT id FROM files WHERE path = ?1", [path], |r| r.get(0)).ok()?;
+    if folder.is_some() {
+        let _ = library::set_folder(&conn, id, folder);
+    }
+    for t in tags {
+        let _ = library::set_file_tag(&conn, id, *t, true);
+    }
+    Some(id)
+}
+
 /// Makes sure ~/Quire is a watched library folder so imports show up.
 fn ensure_library_folder(app: &AppHandle) {
     let Some(quire) = home().map(|h| h.join("Quire")) else { return };
@@ -142,8 +173,17 @@ fn handle(app: &AppHandle, paths: Vec<PathBuf>) {
     tauri::async_runtime::spawn(async move {
         // Browsers write in bursts; let the file settle first.
         tokio::time::sleep(Duration::from_millis(800)).await;
+        let sources = sources(&app.state::<Db>());
         for p in paths {
+            let Some(src) = sources.iter().find(|s| p.parent() == Some(Path::new(&s.path))) else { continue };
+            // Only files saved after the source was added; old files whose
+            // details merely changed (Spotlight, Finder tags…) are not new.
+            let fresh = std::fs::metadata(&p).map(|m| modified_ms(&m) > src.since_ms).unwrap_or(false);
+            if !fresh {
+                continue;
+            }
             if let Some(imported) = import(&app, &p) {
+                file_into(&app.state::<Db>(), &imported.path, src.folder_id, &src.tag_ids);
                 let _ = app.emit("inbox-imported", imported);
             }
         }
@@ -151,12 +191,20 @@ fn handle(app: &AppHandle, paths: Vec<PathBuf>) {
 }
 
 fn start_watching(app: &AppHandle) -> Result<(), String> {
-    let dirs = watched_dirs();
+    let sources = sources(&app.state::<Db>());
+    if sources.is_empty() {
+        *app.state::<Inbox>().watcher.lock().unwrap() = None;
+        return Ok(());
+    }
     ensure_library_folder(app);
     let handle_app = app.clone();
     let mut watcher = notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
         let Ok(event) = res else { return };
-        if matches!(event.kind, EventKind::Create(_) | EventKind::Modify(_)) {
+        let new_content = matches!(
+            event.kind,
+            EventKind::Create(_) | EventKind::Modify(ModifyKind::Data(_)) | EventKind::Modify(ModifyKind::Name(_)) | EventKind::Modify(ModifyKind::Any)
+        );
+        if new_content {
             let paths: Vec<PathBuf> = event.paths.into_iter().filter(|p| is_html(p)).collect();
             if !paths.is_empty() {
                 handle(&handle_app, paths);
@@ -164,20 +212,19 @@ fn start_watching(app: &AppHandle) -> Result<(), String> {
         }
     })
     .map_err(|e| e.to_string())?;
-    for dir in &dirs {
-        if let Err(e) = watcher.watch(dir, RecursiveMode::NonRecursive) {
-            eprintln!("import: can't watch {}: {e}", dir.display());
+    for s in &sources {
+        if let Err(e) = watcher.watch(Path::new(&s.path), RecursiveMode::NonRecursive) {
+            eprintln!("import: can't watch {}: {e}", s.path);
         }
     }
     *app.state::<Inbox>().watcher.lock().unwrap() = Some(watcher);
 
-    // Pick up anything saved while Quire was closed.
-    let since: i64 = setting(&app.state::<Db>().conn(), SINCE).and_then(|v| v.parse().ok()).unwrap_or_else(now_ms);
-    let missed: Vec<PathBuf> = dirs
+    // Pick up anything saved to a source while Quire was closed.
+    let missed: Vec<PathBuf> = sources
         .iter()
-        .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
+        .flat_map(|s| std::fs::read_dir(&s.path).into_iter().flatten().flatten())
         .map(|e| e.path())
-        .filter(|p| is_html(p) && std::fs::metadata(p).map(|m| modified_ms(&m) > since).unwrap_or(false))
+        .filter(|p| is_html(p))
         .collect();
     if !missed.is_empty() {
         handle(app, missed);
@@ -185,74 +232,72 @@ fn start_watching(app: &AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Called at startup. Import is on unless the user switched it off.
-///
-/// Runs off the main thread: the first read of ~/Downloads makes macOS ask
-/// the user for permission, and that must never hold up the window opening.
+/// Called at startup. Watches only the sources the user chose; with none,
+/// Quire never touches Downloads, Desktop or anything else.
 pub fn start(app: &AppHandle) {
-    let db = app.state::<Db>();
-    let enabled = setting(&db.conn(), ENABLED).map(|v| v == "1").unwrap_or(true);
-    if setting(&db.conn(), SINCE).is_none() {
-        let _ = set_setting(&db.conn(), SINCE, &now_ms().to_string());
+    if sources(&app.state::<Db>()).is_empty() {
+        return;
     }
-    if enabled {
-        let app = app.clone();
-        std::thread::spawn(move || {
-            // Let the window appear before macOS shows its permission prompt.
-            std::thread::sleep(Duration::from_secs(2));
-            if let Err(e) = start_watching(&app) {
-                eprintln!("downloads import: {e}");
-            }
-        });
-    }
+    let app = app.clone();
+    std::thread::spawn(move || {
+        if let Err(e) = start_watching(&app) {
+            eprintln!("import: {e}");
+        }
+    });
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct InboxStatus {
-    enabled: bool,
+    sources: Vec<Source>,
     downloads: String,
     desktop: String,
     documents: String,
     inbox: String,
-    /// HTML files in Downloads from before import was switched on.
-    past_count: usize,
 }
 
+/// Paths only: this never reads any folder, so it can't trigger a permission prompt.
 #[tauri::command]
 pub fn inbox_status(db: State<'_, Db>) -> Result<InboxStatus, String> {
-    let downloads = downloads_dir().ok_or("No Downloads folder")?;
-    let since: i64 = setting(&db.conn(), SINCE).and_then(|v| v.parse().ok()).unwrap_or_else(now_ms);
-    let past_count = watched_dirs()
-        .iter()
-        .flat_map(|d| std::fs::read_dir(d).into_iter().flatten().flatten())
-        .filter(|e| is_html(&e.path()) && e.metadata().map(|m| modified_ms(&m) <= since).unwrap_or(false))
-        .count();
+    let at = |p: Option<PathBuf>| p.map(|p| p.to_string_lossy().into_owned()).unwrap_or_default();
     Ok(InboxStatus {
-        enabled: setting(&db.conn(), ENABLED).map(|v| v == "1").unwrap_or(true),
-        downloads: downloads.to_string_lossy().into_owned(),
-        desktop: desktop_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(),
-        documents: home().map(|h| h.join("Documents").to_string_lossy().into_owned()).unwrap_or_default(),
-        inbox: inbox_dir().map(|p| p.to_string_lossy().into_owned()).unwrap_or_default(),
-        past_count,
+        sources: sources(&db),
+        downloads: at(downloads_dir()),
+        desktop: at(desktop_dir()),
+        documents: at(home().map(|h| h.join("Documents"))),
+        inbox: at(inbox_dir()),
     })
 }
 
+/// Replaces the watched sources. New sources only import files saved from now on.
 #[tauri::command]
-pub fn set_inbox_enabled(app: AppHandle, enabled: bool) -> Result<(), String> {
-    let db = app.state::<Db>();
-    set_setting(&db.conn(), ENABLED, if enabled { "1" } else { "0" })?;
-    if enabled {
-        set_setting(&db.conn(), SINCE, &now_ms().to_string())?;
-        start_watching(&app)
-    } else {
-        *app.state::<Inbox>().watcher.lock().unwrap() = None;
-        Ok(())
-    }
+pub fn set_import_sources(app: AppHandle, sources: Vec<Source>) -> Result<(), String> {
+    let previous = self::sources(&app.state::<Db>());
+    let now = now_ms();
+    let sources: Vec<Source> = sources
+        .into_iter()
+        .map(|mut s| {
+            s.since_ms = previous.iter().find(|p| p.path == s.path).map(|p| p.since_ms).unwrap_or(now);
+            s
+        })
+        .collect();
+    set_setting(&app.state::<Db>().conn(), SOURCES, &serde_json::to_string(&sources).map_err(|e| e.to_string())?)?;
+    start_watching(&app)
 }
 
-/// Folders skipped when looking for HTML: app bundles, code dependencies and caches.
-const SKIP_DIRS: &[&str] = &["node_modules", "Library", "Applications", "target", "dist", "build", "vendor", "__pycache__"];
+/// Folders skipped when looking for HTML: code dependencies, caches, and
+/// places macOS guards with their own permission prompts (other apps' data,
+/// photo and music libraries, iCloud).
+const SKIP_DIRS: &[&str] = &[
+    "node_modules", "Library", "Applications", "target", "dist", "build", "vendor", "__pycache__",
+    "Pictures", "Music", "Movies", "Mobile Documents", "Containers", "Group Containers",
+];
+/// Package-like folders (apps, photo libraries…) are never scanned inside.
+fn is_package(name: &str) -> bool {
+    name.rsplit_once('.').is_some_and(|(_, ext)| {
+        matches!(ext, "app" | "photoslibrary" | "musiclibrary" | "tvlibrary" | "bundle" | "framework" | "plugin" | "kext" | "pkg" | "xcodeproj" | "xcworkspace" | "lproj" | "noindex")
+    })
+}
 const SCAN_DEPTH: usize = 4;
 const SCAN_LIMIT: usize = 5000;
 
@@ -276,9 +321,10 @@ fn scan_dir(dir: &Path, depth: usize, out: &mut Vec<Candidate>) {
         if name.starts_with('.') {
             continue;
         }
+        // file_type() doesn't follow symlinks, so links to other places (and volumes) are skipped.
         let Ok(ft) = e.file_type() else { continue };
         if ft.is_dir() {
-            if depth > 0 && !SKIP_DIRS.contains(&name.as_str()) && !name.ends_with(".app") {
+            if depth > 0 && !SKIP_DIRS.contains(&name.as_str()) && !is_package(&name) {
                 scan_dir(&path, depth - 1, out);
             }
         } else if ft.is_file() && is_html(&path) {
@@ -326,7 +372,14 @@ pub struct ImportSummary {
 /// Copies the given HTML files into `dest` (a library folder; ~/Quire/Inbox
 /// when empty). Files already there with the same content are left alone.
 #[tauri::command]
-pub async fn import_paths(app: AppHandle, paths: Vec<String>, dest: Option<String>) -> Result<ImportSummary, String> {
+pub async fn import_paths(
+    app: AppHandle,
+    paths: Vec<String>,
+    dest: Option<String>,
+    folder_id: Option<i64>,
+    tag_ids: Option<Vec<i64>>,
+) -> Result<ImportSummary, String> {
+    let tag_ids = tag_ids.unwrap_or_default();
     ensure_library_folder(&app);
     let dest = match dest.filter(|d| !d.is_empty()) {
         Some(d) => PathBuf::from(d),
@@ -350,9 +403,7 @@ pub async fn import_paths(app: AppHandle, paths: Vec<String>, dest: Option<Strin
         }
         if let Some(name) = p.file_name() {
             let target = dest.join(canonical_name(&name.to_string_lossy()));
-            let conn = app.state::<Db>();
-            let id = conn.conn().query_row("SELECT id FROM files WHERE path = ?1", [target.to_string_lossy()], |r| r.get::<_, i64>(0));
-            if let Ok(id) = id {
+            if let Some(id) = file_into(&app.state::<Db>(), &target.to_string_lossy(), folder_id, &tag_ids) {
                 if !summary.ids.contains(&id) {
                     summary.ids.push(id);
                 }

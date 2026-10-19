@@ -102,7 +102,10 @@ mockIPC((cmd, args) => {
         links: [{ documentId: "d1", path: files[0].path, role: "owner", title: files[0].title, ownerName: null }],
       };
     case "inbox_status":
-      return { enabled: true, downloads: "/Users/demo/Downloads", desktop: "/Users/demo/Desktop", documents: "/Users/demo/Documents", inbox: "/Users/demo/Quire/Inbox", pastCount: 0 };
+      return { sources: [], downloads: "/Users/demo/Downloads", desktop: "/Users/demo/Desktop", documents: "/Users/demo/Documents", inbox: "/Users/demo/Quire/Inbox" };
+    case "plugin:dialog|open":
+      // The real picker is native; in the preview, "choose" a folder.
+      return (a.options as { directory?: boolean })?.directory ? ["/Users/demo/Downloads"] : ["/Users/demo/Desktop/report.html"];
     case "import_scan":
       return files.slice(0, ((a.folders as string[]).length * 3 + (a.files as string[]).length) % 9).map((f) => ({ path: f.path, name: f.name, sizeBytes: f.sizeBytes, modifiedMs: f.modifiedMs }));
     case "take_pending_opens":

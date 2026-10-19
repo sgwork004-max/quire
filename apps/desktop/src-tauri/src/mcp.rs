@@ -434,6 +434,7 @@ fn write_json(path: &Path, value: &Value) -> Result<(), String> {
     std::fs::rename(&tmp, path).map_err(|e| e.to_string())
 }
 
+#[cfg(test)]
 fn is_connected(config: &Value, command: &str) -> bool {
     config["mcpServers"][SERVER_NAME]["command"].as_str() == Some(command)
 }
@@ -472,20 +473,24 @@ pub struct ClaudeStatus {
     code: ClaudeTarget,
 }
 
-fn target_status(path: Option<PathBuf>, installed: bool, command: &str) -> ClaudeTarget {
-    let connected = path.and_then(|p| read_json(&p).ok()).map(|c| is_connected(&c, command)).unwrap_or(false);
-    ClaudeTarget { installed: installed || connected, connected }
+const CONNECTED_KEY: &str = "claude.connected";
+
+/// Which Claude apps Quire connected, as recorded by Quire itself. Settings
+/// shows this instead of reading Claude's own files, which macOS guards
+/// with an "access data from other apps" prompt.
+fn recorded(db: &Db) -> Vec<String> {
+    crate::db::setting(&db.conn(), CONNECTED_KEY).map(|v| v.split(',').filter(|s| !s.is_empty()).map(str::to_string).collect()).unwrap_or_default()
 }
 
 #[tauri::command]
-pub fn claude_status() -> Result<ClaudeStatus, String> {
-    let command = server_command()?;
-    let desktop_installed = desktop_config().and_then(|p| p.parent().map(Path::exists)).unwrap_or(false)
-        || cfg!(target_os = "macos") && Path::new("/Applications/Claude.app").exists();
+pub fn claude_status(db: tauri::State<'_, Db>) -> Result<ClaudeStatus, String> {
+    let connected = recorded(&db);
+    // Only cheap existence checks of well-known paths; nothing inside other apps' data is read.
+    let desktop_installed = cfg!(target_os = "macos") && Path::new("/Applications/Claude.app").exists() || cfg!(not(target_os = "macos"));
     let code_installed = code_config().map(|p| p.exists()).unwrap_or(false);
     Ok(ClaudeStatus {
-        desktop: target_status(desktop_config(), desktop_installed, &command),
-        code: target_status(code_config(), code_installed, &command),
+        desktop: ClaudeTarget { installed: desktop_installed, connected: connected.iter().any(|c| c == "desktop") },
+        code: ClaudeTarget { installed: code_installed, connected: connected.iter().any(|c| c == "code") },
     })
 }
 
@@ -517,9 +522,19 @@ fn claude_cli(args: &[&str]) -> bool {
 
 /// Registers Quire with the Claude desktop app ("desktop") or Claude Code ("code").
 #[tauri::command(async)]
-pub fn connect_claude(target: String, connect: bool) -> Result<(), String> {
+pub fn connect_claude(db: tauri::State<'_, Db>, target: String, connect: bool) -> Result<(), String> {
+    connect_target(&target, connect)?;
+    let mut list = recorded(&db);
+    list.retain(|t| t != &target);
+    if connect {
+        list.push(target);
+    }
+    crate::db::set_setting(&db.conn(), CONNECTED_KEY, &list.join(","))
+}
+
+fn connect_target(target: &str, connect: bool) -> Result<(), String> {
     let command = server_command()?;
-    match target.as_str() {
+    match target {
         "desktop" => set_server(&desktop_config().ok_or("No home folder")?, connect, &command),
         "code" => {
             // Prefer Claude Code's own command: it may be rewriting ~/.claude.json while running.

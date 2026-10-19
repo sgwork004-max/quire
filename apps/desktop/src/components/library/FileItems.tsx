@@ -4,6 +4,7 @@ import { FileCode2, MoreHorizontal, Star, Users } from "lucide-react";
 import { useCloud } from "../../store/cloud";
 import type { FileEntry, Tag } from "../../lib/ipc";
 import { formatBytes, parentFolder, relativeTime } from "../../lib/format";
+import { consumeDragClick, startFileDrag } from "../../lib/fileDrag";
 import { useLibrary } from "../../store/library";
 import { Thumbnail } from "./Thumbnail";
 
@@ -79,9 +80,6 @@ function RenameInput({ file }: { file: FileEntry }) {
   );
 }
 
-/** Drag payload for library files (comma-separated ids), dropped on sidebar folders. */
-export const FILE_DRAG = "application/x-quire-files";
-
 function useFileActions(file: FileEntry) {
   const { openFile, fileMenu, select, clearSelection } = useLibrary.getState();
   const selected = useLibrary((s) => s.selected.includes(file.id));
@@ -89,14 +87,11 @@ function useFileActions(file: FileEntry) {
     selected,
     props: {
       "aria-selected": selected,
-      draggable: !file.trashedMs,
-      onDragStart: (e: React.DragEvent) => {
-        const { selected: ids } = useLibrary.getState();
-        const dragged = ids.includes(file.id) ? ids : [file.id];
-        e.dataTransfer.setData(FILE_DRAG, dragged.join(","));
-        e.dataTransfer.effectAllowed = "copyMove";
+      onPointerDown: (e: React.PointerEvent) => {
+        if (!file.trashedMs) startFileDrag(e, file.id);
       },
       onClick: (e: React.MouseEvent) => {
+        if (consumeDragClick()) return;
         if (e.metaKey || e.ctrlKey) return select(file, "toggle");
         if (e.shiftKey) return select(file, "range");
         clearSelection();

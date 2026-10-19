@@ -67,8 +67,6 @@ interface LibraryState {
 
   addFolder: (path?: string) => Promise<void>;
   folderMenu: (location: Location) => void;
-  /** Offer to import HTML already in Downloads (shown once). */
-  inboxBanner: number | null;
   createTag: (name: string) => Promise<number | null>;
   updateTag: (tag: Tag, changes: Partial<Pick<Tag, "name" | "color">>) => Promise<void>;
   tagMenu: (tag: Tag, startRename: () => void) => void;
@@ -167,7 +165,6 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   searchFocus: 0,
   selected: [],
   anchor: null,
-  inboxBanner: null,
 
   setView: (view) => {
     set({ view, search: "", renamingId: null, selected: [], anchor: null });
@@ -482,24 +479,9 @@ export const useLibrary = create<LibraryState>((set, get) => ({
   },
 
   folderMenu: async (location) => {
-    const isQuire = /[\\/]Quire$/.test(location.path);
-    const inbox = isQuire ? await ipc.inboxStatus().catch(() => null) : null;
     void popupMenu([
-      ...(inbox
-        ? [
-            {
-              text: "Import New HTML from Downloads and Desktop",
-              checked: inbox.enabled,
-              action: () =>
-                void ipc
-                  .setInboxEnabled(!inbox.enabled)
-                  .then(() => toast(inbox.enabled ? "Stopped importing automatically" : "New HTML in Downloads and on your Desktop will now appear in Quire"))
-                  .catch(fail("Couldn't change that setting")),
-            },
-            { text: "Import HTML…", action: () => useImport.getState().show() },
-            null,
-          ]
-        : []),
+      { text: "Import HTML…", action: () => useImport.getState().show() },
+      null,
       { text: "Show in Finder", action: () => void revealItemInDir(location.path) },
       { text: "Rescan", action: () => void ipc.rescanLocation(location.id).catch(fail("Couldn't rescan")) },
       null,

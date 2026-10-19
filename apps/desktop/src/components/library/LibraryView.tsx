@@ -9,7 +9,6 @@ import { IconButton } from "../IconButton";
 import { Logo } from "../Logo";
 import { FileCard, FileRow } from "./FileItems";
 import { SharedView } from "./SharedView";
-import { InboxBanner } from "./InboxBanner";
 
 const SORTS: { id: SortKey; label: string }[] = [
   { id: "modified", label: "Last modified" },
@@ -133,7 +132,6 @@ export function LibraryView() {
         )}
       </div>
 
-      <InboxBanner />
       {selected.length > 0 && <SelectionBar ids={selected} />}
       <div
         className="min-h-0 flex-1 overflow-y-auto px-6 pb-10"

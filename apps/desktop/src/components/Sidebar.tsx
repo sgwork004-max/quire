@@ -3,11 +3,10 @@ import { useState, type ReactNode } from "react";
 import { Clock, Download, EyeOff, Folder, FolderPlus, HardDrive, Library, PanelLeftClose, PanelLeftOpen, Plus, Settings, Star, Trash2, Users } from "lucide-react";
 import { useCloud } from "../store/cloud";
 import { HOME, useApp } from "../store/app";
-import { dropOn, useLibrary, type DropTarget, type LibraryView } from "../store/library";
+import { useLibrary, type DropTarget, type LibraryView } from "../store/library";
 import type { Tag } from "../lib/ipc";
 import { useSettings } from "../store/settings";
 import { useImport } from "../store/import";
-import { FILE_DRAG } from "./library/FileItems";
 import { IconButton } from "./IconButton";
 import { AccountButton } from "./Account";
 import { NotificationsBell } from "./Notifications";
@@ -201,28 +200,8 @@ function NavItem({
   onClick: () => void;
   onContextMenu?: () => void;
 }) {
-  const [over, setOver] = useState(false);
-  const drop = dropTarget
-    ? {
-        "data-drop": `${dropTarget.kind}:${dropTarget.id}`,
-        "data-label": label,
-        onDragOver: (e: React.DragEvent) => {
-          if (!e.dataTransfer.types.includes(FILE_DRAG)) return;
-          e.preventDefault();
-          e.dataTransfer.dropEffect = "move";
-          setOver(true);
-        },
-        onDragLeave: () => setOver(false),
-        onDrop: (e: React.DragEvent) => {
-          setOver(false);
-          const ids = (e.dataTransfer.getData(FILE_DRAG) || "").split(",").map(Number).filter(Boolean);
-          if (ids.length) {
-            e.preventDefault();
-            void dropOn(dropTarget, ids);
-          }
-        },
-      }
-    : {};
+  // Library files are dropped here by lib/fileDrag.ts; Finder files by App.tsx. Both find the target through data-drop.
+  const drop = dropTarget ? { "data-drop": `${dropTarget.kind}:${dropTarget.id}`, "data-label": label } : {};
   if (compact) {
     return (
       <button
@@ -239,7 +218,7 @@ function NavItem({
         className={clsx(
           "relative mx-auto flex h-8 w-9 items-center justify-center rounded-md transition-colors",
           active ? "bg-accent-soft text-accent" : "text-ink-3 hover:bg-hover hover:text-ink",
-          over && "ring-2 ring-accent", "data-[drop-hover]:ring-2 data-[drop-hover]:ring-accent",
+          "data-[drop-hover]:bg-accent-soft data-[drop-hover]:ring-2 data-[drop-hover]:ring-accent",
         )}
       >
         {icon}
@@ -260,7 +239,7 @@ function NavItem({
       className={clsx(
         "flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-[13px] transition-colors",
         active ? "bg-accent-soft font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink",
-        over && "ring-2 ring-accent", "data-[drop-hover]:ring-2 data-[drop-hover]:ring-accent",
+        "data-[drop-hover]:bg-accent-soft data-[drop-hover]:ring-2 data-[drop-hover]:ring-accent",
       )}
     >
       <span className={clsx("shrink-0", active ? "text-accent" : "text-ink-3")}>{icon}</span>

@@ -160,6 +160,8 @@ async function restorePrefs() {
   ]);
   useApp.setState({ ...(sidebarOpen !== undefined && { sidebarOpen }), ...(codeWidth && { codeWidth }) });
   void applyAppearance();
+  // First run: onboarding, where the user picks what to import (nothing is read before that).
+  if (!(await loadPref<boolean>("onboarded"))) useImport.getState().showOnboarding();
   useLibrary.setState({ ...(layout && { layout }), ...(sort && { sort }) });
 }
 

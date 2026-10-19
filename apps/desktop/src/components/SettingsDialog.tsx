@@ -4,7 +4,8 @@ import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentWindow, type Theme } from "@tauri-apps/api/window";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { Loader2, LogOut, X } from "lucide-react";
-import { errorMessage, ipc } from "../lib/ipc";
+import { errorMessage, ipc, type ImportSource } from "../lib/ipc";
+import { useLibrary } from "../store/library";
 import { loadPref, savePref } from "../lib/prefs";
 import { checkForUpdates } from "../lib/updates";
 import { useAccount } from "../store/account";
@@ -102,12 +103,13 @@ function SettingsPanel() {
   const { signIn, signOut, rename } = useAccount.getState();
   const [name, setName] = useState(account?.name ?? "");
   const [appearance, setAppearance] = useState<Appearance>("system");
-  const [auto, setAuto] = useState<boolean | null>(null);
+  const [sources, setSources] = useState<ImportSource[] | null>(null);
+  const overview = useLibrary((st) => st.overview);
   const [version, setVersion] = useState("");
 
   useEffect(() => {
     void loadPref<Appearance>("appearance").then((a) => a && setAppearance(a));
-    void ipc.inboxStatus().then((s) => setAuto(s.enabled)).catch(() => setAuto(null));
+    void ipc.inboxStatus().then((s) => setSources(s.sources)).catch(() => setSources([]));
     void getVersion().then(setVersion);
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && hide();
     window.addEventListener("keydown", onKey);
@@ -122,9 +124,10 @@ function SettingsPanel() {
     void applyAppearance(a);
   };
 
-  const toggleAuto = (on: boolean) => {
-    setAuto(on);
-    void ipc.setInboxEnabled(on).catch(() => setAuto(!on));
+  const stopWatching = (path: string) => {
+    const next = (sources ?? []).filter((x) => x.path !== path);
+    setSources(next);
+    void ipc.setImportSources(next);
   };
 
   return (
@@ -199,11 +202,28 @@ function SettingsPanel() {
             </div>
           </Row>
 
-          <Row label="Import" hint="HTML from AI chats usually lands in Downloads.">
-            <label className="flex items-start gap-2.5 pt-1.5 text-[12.5px] leading-snug text-ink-2">
-              <input type="checkbox" disabled={auto === null} checked={!!auto} onChange={(e) => toggleAuto(e.target.checked)} className="mt-0.5 accent-[var(--accent)]" />
-              <span>Automatically import new HTML from Downloads and Desktop into Quire › Inbox</span>
-            </label>
+          <Row label="Import" hint="Quire only looks in places you chose.">
+            <p className="pt-1.5 text-[12.5px] leading-snug text-ink-2">
+              {sources?.length ? "New HTML saved here is imported automatically:" : "Quire isn't watching any folders. Choose some with Import, and tick “Keep importing new files”."}
+            </p>
+            {!!sources?.length && (
+              <ul className="mt-2 divide-y divide-line overflow-hidden rounded-lg border border-line">
+                {sources.map((src) => {
+                  const folder = overview?.folders.find((f) => f.id === src.folderId);
+                  return (
+                    <li key={src.path} className="flex items-center gap-2 px-2.5 py-1.5 text-[12px]">
+                      <span className="min-w-0 flex-1 truncate text-ink" title={src.path}>
+                        {src.path.replace(/^\/Users\/[^/]+/, "~")}
+                        {folder && <span className="text-ink-3"> → {folder.name}</span>}
+                      </span>
+                      <button type="button" onClick={() => stopWatching(src.path)} className="shrink-0 rounded px-1.5 py-0.5 text-ink-3 hover:bg-hover hover:text-ink">
+                        Stop
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -212,7 +232,7 @@ function SettingsPanel() {
               }}
               className="mt-2.5 h-7 rounded-md border border-line-strong px-2.5 text-[12px] text-ink hover:bg-hover"
             >
-              Import HTML now…
+              Import HTML…
             </button>
           </Row>
 

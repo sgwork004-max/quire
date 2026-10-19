@@ -192,7 +192,7 @@ pub fn run() {
             export::print_document,
             export::export_standalone,
             inbox::inbox_status,
-            inbox::set_inbox_enabled,
+            inbox::set_import_sources,
             inbox::import_scan,
             inbox::import_paths,
             mcp::claude_status,

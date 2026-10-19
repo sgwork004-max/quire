@@ -29,6 +29,14 @@ export interface FileEntry {
   snippet: string | null;
 }
 
+/** A folder Quire watches for new HTML, and where its imports are filed. */
+export interface ImportSource {
+  path: string;
+  folderId: number | null;
+  tagIds: number[];
+  sinceMs?: number;
+}
+
 export interface ImportCandidate {
   path: string;
   name: string;
@@ -228,15 +236,15 @@ export const ipc = {
     invoke<DataSource>("add_data_source", { path, url, name, intervalMin }),
   refreshDataSource: (id: number) => invoke<DataSource>("refresh_data_source", { id }),
   removeDataSource: (id: number) => invoke<void>("remove_data_source", { id }),
-  inboxStatus: () =>
-    invoke<{ enabled: boolean; downloads: string; desktop: string; documents: string; inbox: string; pastCount: number }>("inbox_status"),
+  /** Paths only; never reads a folder, so it can't trigger a permission prompt. */
+  inboxStatus: () => invoke<{ sources: ImportSource[]; downloads: string; desktop: string; documents: string; inbox: string }>("inbox_status"),
+  setImportSources: (sources: ImportSource[]) => invoke<void>("set_import_sources", { sources }),
   claudeStatus: () =>
     invoke<{ desktop: { installed: boolean; connected: boolean }; code: { installed: boolean; connected: boolean } }>("claude_status"),
   connectClaude: (target: "desktop" | "code", connect: boolean) => invoke<void>("connect_claude", { target, connect }),
   importScan: (folders: string[], files: string[]) => invoke<ImportCandidate[]>("import_scan", { folders, files }),
-  importPaths: (paths: string[], dest: string | null) =>
-    invoke<{ added: number; updated: number; unchanged: number; ids: number[] }>("import_paths", { paths, dest }),
-  setInboxEnabled: (enabled: boolean) => invoke<void>("set_inbox_enabled", { enabled }),
+  importPaths: (paths: string[], dest: string | null, folderId: number | null = null, tagIds: number[] = []) =>
+    invoke<{ added: number; updated: number; unchanged: number; ids: number[] }>("import_paths", { paths, dest, folderId, tagIds }),
   printDocument: (id: string) => invoke<void>("print_document", { id }),
   exportStandalone: (id: string, dest: string) => invoke<string>("export_standalone", { id, dest }),
   cloudApi: <T>(method: "GET" | "POST" | "PATCH" | "DELETE", path: string, body?: unknown) =>
