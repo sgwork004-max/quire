@@ -154,7 +154,7 @@ h2{font-size:clamp(30px,3.8vw,46px);margin:0}
 
 /* install */
 .install{background:var(--paper)}
-.ways{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px}
+.ways{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .way{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px}
 .way h3{font-family:"Quire Display",system-ui;font-size:22px;letter-spacing:-.02em;margin:0 0 4px}
 .way p{color:var(--text-2);font-size:14.5px;margin:8px 0 0}
@@ -162,6 +162,20 @@ h2{font-size:clamp(30px,3.8vw,46px);margin:0}
 .cmd code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font:13px/1.5 ui-monospace,"SF Mono",Menlo,monospace;scrollbar-width:none}
 .copy{flex:none;height:28px;padding:0 11px;border-radius:7px;border:0;background:var(--blue);color:var(--on-blue);font:600 12.5px system-ui;cursor:pointer}
 
+/* one-line install */
+.install-box{max-width:640px;margin:30px auto 0;text-align:left}
+.os{display:inline-flex;padding:3px;border-radius:10px;background:var(--paper);gap:2px;margin-bottom:10px}
+.os button{border:0;background:transparent;color:var(--text-2);font:600 13.5px system-ui;padding:6px 14px;border-radius:8px;cursor:pointer}
+.os button[aria-selected=true]{background:var(--surface);color:var(--text);box-shadow:0 0 0 1px var(--line-2)}
+.bigcmd{display:flex;align-items:center;gap:10px;background:var(--surface);border:1.5px solid var(--line-2);border-radius:14px;padding:10px 10px 10px 18px;box-shadow:var(--shadow)}
+.bigcmd code{flex:1;min-width:0;white-space:pre-wrap;word-break:break-all;font:13.5px/1.55 ui-monospace,"SF Mono",Menlo,monospace}
+.bigcmd .copy{height:42px;padding:0 18px;border-radius:10px;font-size:14.5px}
+.install-box .fine{text-align:center}
+.how1{margin:12px 0 0;font-size:14px;color:var(--text-3);text-align:center}
+.how1 b{color:var(--text-2)}
+.how1 a{color:var(--text-3)}
+.is-win,.is-mac{display:none}
+[data-os=mac] .is-mac,[data-os=win] .is-win{display:revert}
 /* faq */
 .faq{max-width:720px;margin-inline:auto}
 details{border-bottom:1px solid var(--line-2);padding:16px 0}
@@ -207,18 +221,19 @@ footer .grow{flex:1}
 <header id="top"><div class="wrap bar">
   <a class="brand" href="#"><svg aria-hidden="true"><use href="#logo"/></svg>Quire</a>
   <nav aria-label="Main"><a href="#how">How it works</a><a href="#features">Features</a><a href="#share">Sharing</a><a href="#claude">Claude</a><a href="https://github.com/sgwork004-max/quire">GitHub</a></nav>
-  <a class="btn primary small" href="#download">Download</a>
+  <a class="btn primary small" href="#download">Install</a>
 </div></header>
 
 <main>
 <div class="paper hero"><div class="wrap">
   <h1 class="display">Your HTML files, <span class="mark">finally sorted.</span></h1>
   <p class="lede">The future of data representation is HTML. Quire puts all your HTML files in one place: editable, shareable and well organised.</p>
-  <div class="ctas">
-    <a class="btn primary" href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg"><svg aria-hidden="true"><use href="#apple"/></svg>Download for Mac</a>
-    <a class="btn ghost" href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-windows-setup.exe"><svg aria-hidden="true"><use href="#win"/></svg>Windows</a>
+  <div class="install-box">
+    <div class="os" role="tablist" aria-label="Operating system"><button type="button" role="tab" data-os="mac" aria-selected="true">Mac</button><button type="button" role="tab" data-os="win" aria-selected="false">Windows</button></div>
+    <div class="bigcmd"><code id="hero-cmd" data-mac="curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh" data-win="irm https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.ps1 | iex">curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh</code><button class="copy" type="button" data-copy="#hero-cmd">Copy</button></div>
+    <p class="how1"><span class="is-mac">Paste in <b>Terminal</b> (⌘Space, type Terminal) and press Return.</span><span class="is-win">Paste in <b>PowerShell</b> (Start, type PowerShell) and press Enter.</span> Quire installs and opens.</p>
+    <p class="fine">Free and open source · <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg">Mac .dmg</a> · <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-windows-setup.exe">Windows .exe</a></p>
   </div>
-  <p class="fine">Free and open source · Apple Silicon and Intel</p>
   <figure class="shot rise"><div class="chrome" aria-hidden="true"><i></i><i></i><i></i></div><picture><source srcset="img/library-dark.jpg" media="(prefers-color-scheme: dark)"><img src="img/library.jpg" alt="The Quire library: live previews of dashboards, reports and landing pages, with folders and tags in the sidebar." width="2880" height="1800"></picture></figure>
   <p class="sources">Works with HTML from <b>ChatGPT</b><b>Claude</b><b>Gemini</b><b>Copilot</b><b>Cursor</b><b>any tool that saves .html</b></p>
 </div></div>
@@ -282,13 +297,14 @@ footer .grow{flex:1}
   <div class="head rise"><h2 class="display">Get Quire. It's free.</h2><p>Installed copies update themselves.</p></div>
   <div class="ways">
     <div class="way rise"><h3>Mac</h3>
-      <p><b>Easiest:</b> open Terminal (⌘Space, type Terminal), paste this and press Return. No security warning.</p>
-      <div class="cmd"><code id="cmd">curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh</code><button class="copy" type="button" data-copy="#cmd">Copy</button></div>
-      <p>Prefer the <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg">.dmg</a>? Drag Quire to Applications and open it. When macOS says it can't verify the app, click <b>Done</b>, then go to <b>System Settings › Privacy &amp; Security</b>, scroll down and click <b>Open Anyway</b>.</p>
+      <p>Open Terminal (⌘Space, type Terminal), paste, press Return. No security warning.</p>
+      <div class="cmd"><code id="cmd-mac">curl -fsSL https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.sh | sh</code><button class="copy" type="button" data-copy="#cmd-mac">Copy</button></div>
+      <p>Prefer the <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg">.dmg</a>? Drag Quire to Applications and open it. When macOS can't verify the app, click <b>Done</b>, then <b>System Settings › Privacy &amp; Security › Open Anyway</b>.</p>
     </div>
     <div class="way rise"><h3>Windows</h3>
-      <p><a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-windows-setup.exe">Download the installer</a> and run it. If SmartScreen appears, click <b>More info › Run anyway</b>.</p>
-      <p><a href="https://github.com/sgwork004-max/quire/releases">All versions</a></p>
+      <p>Open PowerShell (Start, type PowerShell), paste, press Enter. No SmartScreen warning.</p>
+      <div class="cmd"><code id="cmd-win">irm https://raw.githubusercontent.com/sgwork004-max/quire/main/scripts/install.ps1 | iex</code><button class="copy" type="button" data-copy="#cmd-win">Copy</button></div>
+      <p>Prefer the <a href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-windows-setup.exe">.exe</a>? If SmartScreen appears, click <b>More info › Run anyway</b>. <a href="https://github.com/sgwork004-max/quire/releases">All versions</a></p>
     </div>
   </div>
 </div></section>
@@ -303,7 +319,7 @@ footer .grow{flex:1}
 
 <section class="paper end"><div class="wrap">
   <h2 class="display rise">Give your HTML a home.</h2>
-  <div class="ctas"><a class="btn primary" href="https://github.com/sgwork004-max/quire/releases/latest/download/Quire-mac.dmg"><svg aria-hidden="true"><use href="#apple"/></svg>Download for Mac</a><a class="btn ghost" href="#download">Windows and other ways</a></div>
+  <div class="ctas"><a class="btn primary" href="#top" onclick="scrollTo({top:0,behavior:'smooth'});return false">Install Quire</a></div>
 </div></section>
 </main>
 
@@ -315,6 +331,15 @@ footer .grow{flex:1}
 
 <script>
   document.documentElement.classList.add("js");
+  const guess = /Windows/i.test(navigator.userAgent) ? "win" : "mac";
+  const setOS = (os) => {
+    document.documentElement.dataset.os = os;
+    const c = document.getElementById("hero-cmd");
+    c.textContent = c.dataset[os];
+    document.querySelectorAll(".os button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.os === os)));
+  };
+  document.querySelectorAll(".os button").forEach((b) => b.addEventListener("click", () => setOS(b.dataset.os)));
+  setOS(guess);
   const header = document.querySelector("header");
   const onScroll = () => header.classList.toggle("scrolled", scrollY > 8);
   addEventListener("scroll", onScroll, { passive: true });
