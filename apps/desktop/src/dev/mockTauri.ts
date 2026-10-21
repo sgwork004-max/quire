@@ -4,6 +4,7 @@
 // Tauri's IPC is missing.
 import { mockIPC, mockWindows } from "@tauri-apps/api/mocks";
 import { VIVID, asDataUrl, launchDashboard } from "./vividSamples";
+import { BRAND } from "./brandSamples";
 
 const now = Date.now();
 const doc = (body: string, bg = "#fff", color = "#1f2937") =>
@@ -33,8 +34,9 @@ const SAMPLES: [string, string][] = [
 ];
 
 // ?demo=vivid swaps in a bolder library for promo recordings.
-const VIVID_DEMO = new URLSearchParams(location.search).get("demo") === "vivid";
-const files = (VIVID_DEMO ? VIVID : SAMPLES).map(([name, url], i) => ({
+// ?demo=brand uses an on-brand library for marketing captures.
+const DEMO = new URLSearchParams(location.search).get("demo");
+const files = (DEMO === "vivid" ? VIVID : DEMO === "brand" ? BRAND : SAMPLES).map(([name, url], i) => ({
   id: i + 1,
   path: `/Users/demo/Quire/${name}.html`,
   name: `${name}.html`,
