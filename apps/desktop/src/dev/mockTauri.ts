@@ -73,6 +73,8 @@ if (new URLSearchParams(location.search).has("open")) {
 // For scripted recordings (promo clips): the same store instance the app uses.
 void import("../store/app").then(({ useApp }) => Object.assign(window, { __quireApp: useApp }));
 void import("../store/library").then(({ useLibrary }) => Object.assign(window, { __quireLibrary: useLibrary }));
+void import("../store/import").then(({ useImport }) => Object.assign(window, { __quireImport: useImport }));
+void import("../components/DataDialog").then(({ useDataDialog }) => Object.assign(window, { __quireData: useDataDialog }));
 Object.assign(window, { __quireDemo: { launchDashboard: (extra: boolean) => asDataUrl(launchDashboard(extra)) } });
 
 mockWindows("main");
@@ -100,7 +102,14 @@ mockIPC((cmd, args) => {
         const term = q.search.trim().toLowerCase();
         return files
           .filter((f) => f.title.toLowerCase().includes(term) || decodeURIComponent(f.url).toLowerCase().includes(term))
-          .map((f) => ({ ...f, snippet: f.title.toLowerCase().includes(term) ? null : `…sales, orders and \u0001${q.search}\u0002 across 6 stores…` }));
+          .map((f) => {
+            // A snippet from the page's own text, like the real index's snippet().
+            const text = decodeURIComponent(f.url.slice(f.url.indexOf(",") + 1)).replace(/<style[\s\S]*?<\/style>|<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ").replace(/&amp;/g, "&").replace(/\s+/g, " ");
+            const at = text.toLowerCase().indexOf(term);
+            if (at < 0 || f.title.toLowerCase().includes(term)) return { ...f, snippet: null };
+            const from = Math.max(0, at - 28);
+            return { ...f, snippet: `…${text.slice(from, at)}\u0001${text.slice(at, at + term.length)}\u0002${text.slice(at + term.length, at + term.length + 30)}…` };
+          });
       }
       if (q.view === "folder") return inFolder(q.folderId!);
       if (q.view === "tag") return files.filter((f) => f.tagIds.includes(q.tagId!));
@@ -154,6 +163,11 @@ mockIPC((cmd, args) => {
         owner: { name: "Riya Shah", email: "riya@example.com", image: null },
         members,
       };
+    case "list_data_sources":
+      return [
+        { id: 1, docPath: a.path, name: "signups.csv", url: "https://docs.google.com/spreadsheets/d/1Nova…/export?format=csv", intervalMin: 15, lastFetchedMs: Date.now() - 4 * 60_000, lastError: null },
+        { id: 2, docPath: a.path, name: "revenue.json", url: "https://api.nova.app/metrics/revenue.json", intervalMin: 60, lastFetchedMs: Date.now() - 22 * 60_000, lastError: null },
+      ];
     case "take_pending_opens":
       return [];
     case "cloud_api":
