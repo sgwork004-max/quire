@@ -18,6 +18,7 @@ Quire is built in phases. Each phase ships something usable.
 Collected here and shipped together as one release, now that Quire is live.
 
 - Find in page (⌘F) for the open document: a search bar that highlights every match and steps through them with Return / ⇧Return.
+- Collapsed sidebar on macOS: the traffic lights, q logo and expand button are cramped and misaligned in the narrow rail. Lay them out cleanly (lights in their own row with proper inset, logo and expand button centred and evenly spaced below).
 
 ## Decisions
 
